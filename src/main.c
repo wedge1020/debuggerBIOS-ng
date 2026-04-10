@@ -178,8 +178,10 @@ void main (void)
         "MOV   R10,       [R9]"
         "ISUB  R9,        R10"
         "IADD  R9,        1"
-        "MOV   R10,       [R9]"
+        //"MOV   R10,       [R9]"
         "MOV   {coffset}, R9"
+        "POP   R10"
+        "POP   R9"
     }
 
     codemode                           = DEBUG_ASM;
