@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no" ?>
 <rom-definition version="1.0">
-    <rom type="bios" title="Vircon32 debuggerBIOS" version="1.2" />
-    <binary path="obj/debuggerBIOS.vbin" />
+    <rom type="bios" title="Vircon32 debuggerBIOS-ng" version="1.2" />
+    <binary path="obj/debuggerBIOS-ng.vbin" />
     <textures>
         <texture path="obj/BiosTexture.vtex" />
     </textures>
