@@ -28,12 +28,23 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <getopt.h>
+
+#define  MODE_NONE      0
+#define  MODE_HEADER    1
+#define  MODE_OFFSET    2
+#define  MODE_STRING    4
+#define  MODE_ENDIAN    8
+#define  MODE_VERBOSE  16
+#define  MODE_HELP     32
 
 typedef  unsigned char  uc;
+typedef  struct option  GetOpt;
 
 uc   *base64_decode        (char *, size_t, size_t *);
 void  build_decoding_table ();
 void  base64_cleanup       ();
+void  process_offset       (int,    int);
 
 static char   encoding_table[]  = { 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H',
                                     'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P',
@@ -48,57 +59,95 @@ static char *decoding_table  = NULL;
 
 int  main (int  argc, char **argv)
 {
-    size_t  ilen    = 0;
-    size_t  olen    = 0;
-    char   *string  = NULL;
-    int     addr[4];
-    int     index   = 0;
-    int     offset  = 0;
+    size_t  ilen                          = 0;
+    size_t  olen                          = 0;
+    char   *string                        = NULL;
+    char   *string_arg                    = NULL;
+    char   *string_data                   = NULL;
+    int     index                         = 0;
+    int     count                         = 0;
+    int     mode                          = MODE_NONE;
+    int     offset                        = 0;
+    int     opt                           = 0;
+    int     option_index                  = 0;
 
-    ////////////////////////////////////////////////////////////////////////////////////
-    //
-    // header mode: output just the "V32-TEXT" header
-    //
-    if (argc       == 1)
+    GetOpt  long_options[]                = {
+        { "header",        no_argument,       0, 'H' },
+        { "offset",        required_argument, 0, 'o' },
+        { "string",        required_argument, 0, 's' },
+        { "little-endian", no_argument,       0, 'e' },
+        { "big-endian",    no_argument,       0, 'E' },
+        { "verbose",       no_argument,       0, 'v' },
+        { "help",          no_argument,       0, 'h' },
+        { 0,               0,                 0,  0  }
+    };
+
+    opt                                   = getopt_long (argc, argv, "Ho:s:eEvh",
+                                                         long_options, &option_index);
+
+    while (opt                           != -1)
     {
-        fprintf (stdout, "V32-TEXT");
+        switch (opt)
+        {
+            case 'H':
+                mode                      = mode | MODE_HEADER;
+                break;
+
+            case 'o':
+                mode                      = mode | MODE_OFFSET;
+                offset                    = strtol (optarg, NULL, 16);
+                break;
+
+            case 's':
+                mode                      = mode | MODE_STRING;
+                string_arg                = (char *) malloc (sizeof (char) * strlen (optarg));
+                strcpy (string_arg, optarg);
+                break;
+
+            case 'e':
+                mode                      = mode | MODE_ENDIAN;
+                break;
+
+            case 'v':
+                mode                      = mode | MODE_VERBOSE;
+                break;
+
+            case 'h':
+                break;
+        }
+        opt                               = getopt_long (argc, argv, "Ho:s:eEvh",
+                                                         long_options, &option_index);
     }
 
     ////////////////////////////////////////////////////////////////////////////////////
     //
-    // demo mode: do the base64 decoding on the sole argument to verify
+    // header mode: display the "V32-TEXT" header
     //
-    else if (argc  == 2)
+    if (MODE_HEADER                      == (mode & MODE_HEADER))
     {
-        offset           = strtol (argv[1], NULL, 16);
-        if (offset      == 0)
+        if (MODE_VERBOSE                 == (mode & MODE_VERBOSE))
         {
-            fprintf (stderr, "ZERO ADDR\n");
-            exit (1);
+            fprintf (stdout, "[verbose] HEADER:  \"");
         }
 
-        for (index       = 3;
-             index      >= 0;
-             index       = index - 1)
+        if ((mode & MODE_ENDIAN)         == MODE_ENDIAN)
         {
-            addr[index]  = offset % 256;
-            offset       = offset / 256;
+            fprintf (stdout, "-23VTXET");
+        }
+        else
+        {
+            fprintf (stdout, "V32-TEXT");
         }
 
-		/*
-        for (index       = 0;
-             index      <  4;
-             index       = index + 1)
+        if (MODE_VERBOSE                 == (mode & MODE_VERBOSE))
         {
-            fprintf (stdout, "%c", addr[index]);
-        }*/
-
-        for (index       = 3;
-             index      >= 0;
-             index       = index - 1)
-        {
-            fprintf (stdout, "%c", addr[index]);
+            fprintf (stdout, "\"\n");
         }
+    }
+
+    if (MODE_OFFSET                      == (mode & MODE_OFFSET))
+    {
+        process_offset (mode, offset);
     }
 
     ////////////////////////////////////////////////////////////////////////////////////
@@ -106,52 +155,67 @@ int  main (int  argc, char **argv)
     // data mode: ignore the first argument, take the base64 value and output its
     // size then the string in "binary"
     //
-    else
+    if (MODE_STRING                      == (mode & MODE_STRING))
     {
-        ilen             = strlen (argv[2]);
-        string           = base64_decode (argv[2], ilen, &olen);
-        //ilen             = olen + (4 - (olen % 4));
-        ilen             = olen;
+        ilen                              = strlen (string_arg);
+        string                            = base64_decode (string_arg, ilen, &olen);
+        string_data                       = (char *) calloc (sizeof (char), 
+                                                             (olen + (4 - (olen % 4))));
+        strcpy (string_data, string);
 
-        olen             = olen + (4 - (olen % 4));
-		olen             = olen / 4;
-        for (index       = 3;
-             index      >= 0;
-             index       = index - 1)
+        ilen                              = olen;
+
+        olen                              = olen + (4 - (olen % 4));
+        olen                              = olen / 4;
+
+        process_offset (mode, olen);
+
+		if (MODE_VERBOSE                 == (mode & MODE_VERBOSE))
+		{
+			fprintf (stdout, "[verbose] string:  ");
+		}
+
+        for (count                        = 0;
+             count                       <  olen;
+             count                        = count + 1)
         {
-            addr[index]  = olen % 256;
-            olen         = olen / 256;
+            if (MODE_ENDIAN              == (mode & MODE_ENDIAN))
+            {
+                for (index                = 3;
+                     index               >= 0;
+                     index                = index - 1)
+                {
+                    if (MODE_VERBOSE     == (mode & MODE_VERBOSE))
+                    {
+                        fprintf (stdout, "%.2hhX ", *(string_data+((count * 4) + index)));
+                    }
+                    else
+                    {
+                        fprintf (stdout, "%c",      *(string_data+((count * 4) + index)));
+                    }
+                }
+            }
+            else
+            {
+                for (index                = 0;
+                     index               <  4;
+                     index                = index + 1)
+                {
+                    if (MODE_VERBOSE     == (mode & MODE_VERBOSE))
+                    {
+                        fprintf (stdout, "%.2hhX ", *(string_data+((count * 4) + index)));
+                    }
+                    else
+                    {
+                        fprintf (stdout, "%c",      *(string_data+((count * 4) + index)));
+                    }
+                }
+            }
         }
 
-        olen             = ilen;
-        /*for (index       = 0;
-             index      <  4;
-             index       = index + 1)
+        if (MODE_VERBOSE                 == (mode & MODE_VERBOSE))
         {
-            fprintf (stdout, "%c", addr[index]);
-        }*/
-        for (index       = 3;
-             index      >= 0;
-             index       = index - 1)
-        {
-            fprintf (stdout, "%c", addr[index]);
-        }
-        olen             = olen + 1;
-
-        fprintf (stdout, "%s", string);
-        fprintf (stdout, "%c", 0);
-        fprintf (stderr, "[string] '%s'\n", string);
-
-        //////////////////////////////////////////////////////////////////////
-        //
-        // pad to ensure we end on a word boundary
-        //
-        fprintf (stderr, "[olen] %ld\n", (4 - (olen % 4)));
-        for (index       = 0;
-             index      <  4 - (olen % 4);
-             index       = index + 1)
-        {
-            fprintf (stdout, "%c", 0);
+            fprintf (stdout, "\n");
         }
     }
 
@@ -250,4 +314,70 @@ void  build_decoding_table ()
 void  base64_cleanup ()
 {
     free (decoding_table);
+}
+
+void  process_offset (int  mode, int  offset)
+{
+    int  index                = 0;
+    int  addr[4];
+
+    if (MODE_VERBOSE         == (mode & MODE_VERBOSE))
+    {
+        fprintf (stdout, "[verbose] OFFSET:  0x%.8X\n", offset);
+    }
+
+    for (index                = 3;
+         index               >= 0;
+         index                = index - 1)
+    {
+        addr[index]           = offset & 0x000000FF;
+        offset                = offset >> 8;
+        if (MODE_VERBOSE     == (mode & MODE_VERBOSE))
+        {
+            fprintf (stdout, "[verbose] addr[%d]: %.2hhX\n", index, addr[index]);
+        }
+    }
+
+    if (MODE_VERBOSE         == (mode & MODE_VERBOSE))
+    {
+        fprintf (stdout, "[verbose] offset:  ");
+    }
+
+    if ((mode & MODE_ENDIAN) == MODE_ENDIAN)
+    {
+        for (index            = 3;
+             index           >= 0;
+             index            = index - 1)
+        {
+            if (MODE_VERBOSE == (mode & MODE_VERBOSE))
+            {
+                fprintf (stdout, "%.2hhX ", addr[index]);
+            }
+            else
+            {
+                fprintf (stdout, "%c",      addr[index]);
+            }
+        }
+    }
+    else
+    {
+        for (index            = 0;
+             index           <  4;
+             index            = index + 1)
+        {
+            if (MODE_VERBOSE == (mode & MODE_VERBOSE))
+            {
+                fprintf (stdout, "%.2hhX ", addr[index]);
+            }
+            else
+            {
+                fprintf (stdout, "%c",    addr[index]);
+            }
+        }
+    }
+
+    if (MODE_VERBOSE         == (mode & MODE_VERBOSE))
+    {
+        fprintf (stdout, "\n");
+    }
 }

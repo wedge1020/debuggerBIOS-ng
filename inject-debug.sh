@@ -39,7 +39,7 @@ cat obj/${VBINFILE}.debug | sed 's/^\(0x[0-9A-F][0-9A-F]*\),[^,]*,\([1-9][0-9]*\
 ##
 ## Initialize the output file
 ##
-echo -n  > out
+echo -n  > ${NAME}.out
 
 count=0
 for entry in `cat 1`; do
@@ -52,18 +52,18 @@ for entry in `cat 1`; do
 
     while [ "${chk}" -eq 1 ]; do
         let asmline=asmline+1
-        echo -n "[${asmline}] "
-        cat ${asmfile} | head -${asmline} | tail -1
+        #echo -n "[${asmline}] "
+        #cat ${asmfile} | head -${asmline} | tail -1
         chk=$(cat ${asmfile} | head -${asmline} | tail -1 | grep '^ *_[^:]*:$' | wc -l)
     done
 
     offset=$(cat 2 | grep "^${asmline}:" | cut -d':' -f2)
     ochk=$(echo "${offset}" | egrep -qio '\<0x[0-9A-F]{8}\>' && echo "true" || echo "false")
     if [ ! -z "${offset}" ] && [ "${ochk}" = "true" ]; then
-        cdata=$(cat ${cfile} | head -${cline} | tail -1 | tr '\t' ' ' | tr -s ' ' | sed 's/^  *//g' | sed 's://.*$::g' | sed 's/  *$//g')
+        cdata=$(cat ${cfile} | head -${cline} | tail -1 | tr '\t' ' ' | tr -s ' ' | sed 's/^ *//g' | sed 's://.*$::g' | sed 's/ *$//g')
         b64data=$(echo -n "${cdata}" | base64 -w 0)
         if [ ! -z "${b64data}" ]; then
-            echo "${offset}:${entry}:${b64data}" >> out
+            echo "${offset}:${entry}:${b64data}" >> ${NAME}.out
             echo "${offset}:${entry}:${b64data}"
         fi
     else
@@ -79,6 +79,47 @@ for entry in `cat 1`; do
     fi
     let count=count+1
 done
-# for line in `cat 1 | cut -d':' -f1`; do offset=$(cat 2 | grep "${line}" | cut -d':' -f2); echo "${line}:${offset}" >> out; done
+
+num_offsets=$(cat ${NAME}.out | wc -l)
+num_offsets=$(echo "obase=16; ${num_offsets}" | bc -q)
+
+#/bin/cp obj/game.vbin game.vbin
+VBINSIZE=$(stat obj/${VBINFILE} | grep 'Size:' | sed 's/^.*Size: \([0-9][0-9]*\).*$/\1/g')
+let VBINSIZE=VBINSIZE-12
+VBINSIZE=$(echo "${VBINSIZE}/4"          | bc -q)
+
+./bincode -H                              >> obj/${VBINFILE} 2> /dev/null
+./bincode -e -o ${num_offsets}            >> obj/${VBINFILE} 2> /dev/null
+
+for offset in `cat ${NAME}.out | cut -d':' -f1`; do
+	./bincode -e -o ${offset}             >> obj/${VBINFILE} 2> /dev/null
+done
+
+for base64data in `cat ${NAME}.out | cut -d':' -f6`; do
+	./bincode -e -s ${base64data}         >> obj/${VBINFILE} 2> /dev/null
+done
+
+NEWVBINSIZE=$(stat obj/${VBINFILE} | grep 'Size:' | sed 's/^.*Size: \([0-9][0-9]*\).*$/\1/g')
+let NEWVBINSIZE=NEWVBINSIZE-12
+NEWVBINSIZE=$(echo "${NEWVBINSIZE}/4"       | bc -q)
+
+DIFF=$((NEWVBINSIZE-VBINSIZE))
+printf "original VBIN data size: %s words\n" "${VBINSIZE}"
+printf "first newVBIN data size: %s words\n" "${NEWVBINSIZE}"
+printf "   difference data size: %s words\n" "${DIFF}"
+let NEWVBINSIZE=NEWVBINSIZE+1
+NEWVBINSIZE=$(printf "0x%.8X" "${NEWVBINSIZE}")
+DIFF=$(printf "0x%.8X" "${DIFF}")
+
+printf "updated  VBIN data size: '%s' words\n" "${NEWVBINSIZE}"
+printf "updated  diff data size: '%s' words\n" "${DIFF}"
+
+dd if=obj/${VBINFILE} of=obj/${NAME}.code ibs=4 obs=4 skip=3 1> /dev/null 2> /dev/null
+
+echo -n "V32-VBIN"                        >  obj/${NAME}.header
+./bincode -e -o ${NEWVBINSIZE}            >> obj/${NAME}.header 2> /dev/null
+
+cat obj/${NAME}.header obj/${NAME}.code   >  obj/${VBINFILE}
+./bincode -e -o ${DIFF}                   >> obj/${VBINFILE}   2> /dev/null
 
 exit 0
