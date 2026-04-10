@@ -17,13 +17,13 @@ echo
 echo Compile the C code
 echo --------------------------
 # compilation of a BIOS requires argument -b
-compile -g debuggerBIOS.c -o obj/debuggerBIOS.asm -b || abort_build
+compile -g debuggerBIOS-ng.c -o obj/debuggerBIOS-ng.asm -b || abort_build
 
 echo
 echo Assemble the ASM code
 echo --------------------------
 # assembly of a BIOS requires argument -b
-assemble -g program obj/debuggerBIOS.asm -o obj/debuggerBIOS.vbin -b || abort_build
+assemble -g program obj/debuggerBIOS-ng.asm -o obj/debuggerBIOS-ng.vbin -b || abort_build
 
 echo
 echo Convert the PNG texture
@@ -38,7 +38,7 @@ wav2vircon BiosSound.wav -o obj/BiosSound.vsnd || abort_build
 echo
 echo Pack the ROM
 echo --------------------------
-packrom debuggerBIOS.xml -o bin/debuggerBIOS.v32 || abort_build
+packrom debuggerBIOS-ng.xml -o bin/debuggerBIOS-ng.v32 || abort_build
 
 echo
 echo BUILD SUCCESSFUL
