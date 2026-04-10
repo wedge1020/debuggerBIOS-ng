@@ -460,13 +460,13 @@ void main (void)
                          pos          <  opos;
                          pos           = pos + 1)
                     {
-						value          = *address;
+                        value          = *address;
                         if ((int)offset    == value)
                         {
                             // slen, opos
-						if (pos       == 3)
-							asm { "HLT" }
-                            zprint_at (0, y, ctmp);
+                            //if (pos       == 3)
+                            //    asm { "HLT" }
+                            print_at (0, y, ctmp);
                             break;
                         }
                         address        = address + 1;
