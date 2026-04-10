@@ -1,0 +1,732 @@
+////////////////////////////////////////////////////////////////////////////////////////
+//
+// views(): process the individual resource views
+//
+void  views (int  modeflag, int  memstart, int  stackgap, int  gamepad)
+{
+    ////////////////////////////////////////////////////////////////////////////////////
+    //
+    // Declare and initialize variables
+    //
+    float     fvalue               = 0.0;
+    int [16]  data;
+    int      *address              = NULL;
+    int      *stack                = NULL;
+    int       index                = 0;
+    int       pos                  = 0;
+    int       value                = 0;
+
+    ////////////////////////////////////////////////////////////////////////////////////
+    //
+    // Ensure the data array is cleared
+    //
+    for (index                     = 0;
+         index                    <  16;
+         index                     = index + 1)
+    {
+        data[index]                = 0;         // clear the data array
+    }
+
+    ////////////////////////////////////////////////////////////////////////////////////
+    //
+    // Process for the selected mode
+    //
+    switch (modeflag)
+    {
+        ////////////////////////////////////////////////////////////////////////////////
+        //
+        // register display: if enabled, the
+        // CART register values will be displayed off to the right
+        //
+        case MODE_REGISTER:
+            print_zoomed_at (490, 0, "register view", 1.0);
+            select_region   (region_divider_h);
+            draw_region_at  (490, 20);
+            draw_region_at  (540, 20);
+
+            for (index             = 0;
+                 index            <  16;        // for all registers
+                 index             = index + 1)
+            {
+                itoa (index, &data[1], 10);
+                data[0]            = 'R';
+                if (index         <  10)
+                {
+                    data[2]        = ':';
+                }
+                else
+                {
+                    data[3]        = ':';
+                }
+                print_at (490, 20 + (index * 20), data); 
+
+                ////////////////////////////////////////////////////////////////////
+                //
+                // display CART register value (backed up in memory)
+                //
+                address            = (int *) ADDR_CART_REGISTERS;
+                hexit_zoomed (540, 20 + (index * 20), *(address+index), 0.75);
+            }
+            break;
+
+        ////////////////////////////////////////////////////////////////////////////////
+        //
+        // memory display: if enabled (R is pressed on DEBUG_GAMEPAD), the
+        // CART memory values will be displayed off to the right
+        //
+        case MODE_MEMORY:
+            print_zoomed_at (464, 0, "memaddr   value", 1.0);
+            select_region   (region_divider_h);
+            draw_region_at  (464, 20);
+            draw_region_at  (560, 20);
+
+            for (index             = 0;
+                 index            <  16;        // run from 0 to 15, for all registers
+                 index             = index + 1)
+            {
+                ////////////////////////////////////////////////////////////////////////
+                //
+                // display address
+                //
+                hexit_zoomed    (464, (20+(index * 20)), (memstart+index), 0.75);
+                print_zoomed_at (544, (20+(index * 20)), ":", 0.75); 
+
+                ////////////////////////////////////////////////////////////////////////
+                //
+                // display value at address
+                //
+                address            = (int *) (memstart+index);
+                hexit_zoomed (560, (20+(index * 20)), *(address), 0.75);
+            }
+            break;
+
+        ////////////////////////////////////////////////////////////////////////////////
+        //
+        // MODE_STACK: if selected, the stack registers and memory that
+        // immediate surrounds the stack will be displayed
+        //
+        case MODE_STACK:
+            print_zoomed_at (464, 0, "stack     value", 1.0);
+            select_region   (region_divider_h);
+            draw_region_at  (464, 20);
+            draw_region_at  (560, 20);
+
+            ////////////////////////////////////////////////////////////////////////////
+            //
+            // obtain the CART stack pointer
+            //
+            print_at (464, 20, "SP:"); 
+            asm
+            {
+                "PUSH R0"
+                "MOV  R0,        [0x003FFBAF]"
+                "MOV  {address}, R0"
+                "POP  R0"
+            }
+            hexit_zoomed (560, 20, (int) (address), 0.75);
+
+            ////////////////////////////////////////////////////////////////////////////
+            //
+            // obtain the CART base pointer
+            //
+            asm
+            {
+                "PUSH R0"
+                "MOV  R0,        [0x003FFBAE]"
+                "MOV  {stack}, R0"
+                "POP  R0"
+            }
+
+            pos                    = 20;
+            for (index             = 0;
+                 index            <= stackgap;
+                 index             = index + 1)
+            {
+                if ((0            <= (int) (address+index)) &&
+                    (0x003FFFFF   >= (int) (address+index)) &&
+                    (stack        >= (address+index)))
+                {
+                    pos            = pos + 16;
+                    print_at     (464, pos, "[SP+"); 
+                    itoa         (index, data, 10);
+                    print_at     (504, pos, data);
+                    print_at     (524, pos, "]:");
+                    hexit_zoomed (560, pos, *(address+index), 0.75);
+                }
+                else
+                {
+                    break;
+                }
+
+                if (stack         == (address+index))
+                {
+                    break;
+                }
+            }
+
+            pos                    = pos + 16;
+            print_at     (464, pos, "BP:"); 
+            hexit_zoomed (560, pos, (int) (stack), 0.75);
+
+            for (index             = 0;
+                 index            <  18 - stackgap;
+                 index             = index + 1)
+            {
+                if ((0            <= (int) (stack+index)) &&
+                    (0x003FFFFF   >= (int) (stack+index)) &&
+                    (stack        >= (address+index)))
+                {
+                    pos            = pos + 16;
+                    print_at     (464, pos, "[BP+"); 
+                    itoa         (index, data, 10);
+                    print_at     (504, pos, data);
+                    print_at     (524, pos, "]:");
+                    hexit_zoomed (560, pos, *(stack+index), 0.75);
+                }
+                else
+                {
+                    break;
+                }
+            }
+            break;
+
+        ////////////////////////////////////////////////////////////////////////////////
+        //
+        // MODE_GPUPORTS: if selected, GPU ports and their values will be
+        // displayed
+        //
+        case MODE_GPUPORTS:
+
+            print_zoomed_at (464, 0, "GPU port value", 1.0);
+            select_region   (region_divider_h);
+            draw_region_at  (464, 20);
+            draw_region_at  (560, 20);
+
+            print_at (464, 20, "Clear:");
+            asm
+            {
+                "PUSH R0"
+                "MOV  R0,      [0x003FFFE3]"
+                "MOV  {value}, R0"
+                "POP  R0"
+            }
+            itoa (value, data, 16);
+            print_at (560, 20, data);
+
+            print_at (464, 40, "Multiply:");
+            asm
+            {
+                "PUSH R0"
+                "MOV  R0,      [0x003FFFE4]"
+                "MOV  {value}, R0"
+                "POP  R0"
+            }
+            itoa (value, data, 10);
+            print_at (560, 40, data);
+
+            print_at (464, 60, "Blending:");
+            asm
+            {
+                "PUSH R0"
+                "MOV  R0,      [0x003FFFE5]"
+                "MOV  {value}, R0"
+                "POP  R0"
+            }
+
+            if (value       == 0x20)
+            {
+                print_at (560, 60, "alpha");
+            }
+            else if (value  == 0x21)
+            {
+                print_at (560, 60, "add");
+            }
+            else
+            {
+                print_at (560, 60, "subtract");
+            }
+
+            print_at (464, 80, "Texture:");
+            asm
+            {
+                "PUSH R0"
+                "MOV  R0,      [0x003FFFE6]"
+                "OUT  GPU_SelectedTexture, R0"
+                "MOV  {value}, R0"
+                "POP  R0"
+            }
+            itoa (value, data, 10);
+            print_at (560, 80, data);
+
+            print_at (464, 100, "Region:");
+            asm
+            {
+                "PUSH R0"
+                "MOV  R0,      [0x003FFFE7]"
+                "OUT  GPU_SelectedRegion, R0"
+                "MOV  {value}, R0"
+                "POP  R0"
+            }
+            itoa (value, data, 10);
+            print_at (560, 100, data);
+
+            print_at (464, 120, "DrawX:");
+            asm
+            {
+                "PUSH R0"
+                "MOV  R0,      [0x003FFFE8]"
+                "MOV  {value}, R0"
+                "POP  R0"
+            }
+            itoa (value, data, 10);
+            print_at (560, 120, data);
+
+            print_at (464, 140, "DrawY:");
+            asm
+            {
+                "PUSH R0"
+                "MOV  R0,      [0x003FFFE9]"
+                "MOV  {value}, R0"
+                "POP  R0"
+            }
+            itoa (value, data, 10);
+            print_at (560, 140, data);
+
+            print_at (464, 160, "ScaleX:");
+            asm
+            {
+                "PUSH R0"
+                "MOV  R0,       [0x003FFFEA]"
+                "MOV  {fvalue}, R0"
+                "POP  R0"
+            }
+            ftoa (fvalue, data);
+            print_at (560, 160, data);
+
+            print_at (464, 180, "ScaleY:");
+            asm
+            {
+                "PUSH R0"
+                "MOV  R0,       [0x003FFFEB]"
+                "MOV  {fvalue}, R0"
+                "POP  R0"
+            }
+            ftoa (fvalue, data);
+            print_at (560, 180, data);
+
+            print_at (464, 200, "Angle:");
+            asm
+            {
+                "PUSH R0"
+                "MOV  R0,       [0x003FFFEC]"
+                "MOV  {fvalue}, R0"
+                "POP  R0"
+            }
+            ftoa (fvalue, data);
+            print_at (560, 200, data);
+
+            print_at (464, 220, "MinX:");
+            asm
+            {
+                "PUSH R0"
+                "IN   R0,      GPU_RegionMinX"
+                "MOV  {value}, R0"
+                "POP  R0"
+            }
+            itoa (value, data, 10);
+            print_at (560, 220, data);
+
+            print_at (464, 240, "MinY:");
+            asm
+            {
+                "PUSH R0"
+                "IN   R0,      GPU_RegionMinY"
+                "MOV  {value}, R0"
+                "POP  R0"
+            }
+            itoa (value, data, 10);
+            print_at (560, 240, data);
+
+            print_at (464, 260, "MaxX:");
+            asm
+            {
+                "PUSH R0"
+                "IN   R0,      GPU_RegionMaxX"
+                "MOV  {value}, R0"
+                "POP  R0"
+            }
+            itoa (value, data, 10);
+            print_at (560, 260, data);
+
+            print_at (464, 280, "MaxY:");
+            asm
+            {
+                "PUSH R0"
+                "IN   R0,      GPU_RegionMaxY"
+                "MOV  {value}, R0"
+                "POP  R0"
+            }
+            itoa (value, data, 10);
+            print_at (560, 280, data);
+
+            print_at (464, 300, "HotspotX:");
+            asm
+            {
+                "PUSH R0"
+                "IN   R0,      GPU_RegionHotSpotX"
+                "MOV  {value}, R0"
+                "POP  R0"
+            }
+            itoa (value, data, 10);
+            print_at (560, 300, data);
+
+            print_at (464, 320, "HotspotY:");
+            asm
+            {
+                "PUSH R0"
+                "IN   R0,      GPU_RegionHotspotY"
+                "MOV  {value}, R0"
+                "POP  R0"
+            }
+            itoa (value, data, 10);
+            print_at (560, 320, data);
+            break;
+
+        ////////////////////////////////////////////////////////////////////////////////
+        //
+        // MODE_SPUPORTS: if selected, SPU ports and their values will be
+        // displayed
+        //
+        case MODE_SPUPORTS:
+            print_zoomed_at (464, 0, "SPU port value", 1.0);
+            select_region   (region_divider_h);
+            draw_region_at  (464, 20);
+            draw_region_at  (560, 20);
+
+            print_at (464, 20, "Volume:");
+            asm
+            {
+                "PUSH R0"
+                "IN   R0,                  SPU_GlobalVolume"
+                "MOV  {fvalue},            R0"
+                "POP  R0"
+            }
+            ftoa (fvalue, data);
+            print_at (560, 20, data);
+
+            print_at (464, 40, "Sound #:");
+            asm
+            {
+                "PUSH R0"
+                "IN   R0,                  SPU_SelectedSound"
+                "MOV  {value},             R0"
+                "POP  R0"
+            }
+            itoa (value, data, 10);
+            print_at (560, 40, data);
+
+            print_at (464, 60, "Channel#:");
+            asm
+            {
+                "PUSH R0"
+                "IN   R0,                  SPU_SelectedChannel"
+                "MOV  {value},             R0"
+                "POP  R0"
+            }
+            itoa (value, data, 10);
+            print_at (560, 60, data);
+
+            print_at (464, 80, "SoundLen:");
+            asm
+            {
+                "PUSH R0"
+                "IN   R0,                  SPU_SoundLength"
+                "MOV  {value},             R0"
+                "POP  R0"
+            }
+            hexit_zoomed (560, 80, value, 0.75);
+
+            print_at (464, 100, "PlayLoop:");
+            asm
+            {
+                "PUSH R0"
+                "IN   R0,                  SPU_SoundPlayWithLoop"
+                "MOV  {value},             R0"
+                "POP  R0"
+            }
+            
+            if (value             == 0)
+            {
+                print_at (560, 100, "false");
+            }
+            else
+            {
+                print_at (560, 100, "true");
+            }
+
+            print_at (464, 120, "LoopStrt:");
+            asm
+            {
+                "PUSH R0"
+                "IN   R0,                  SPU_SoundLoopStart"
+                "MOV  {value},             R0"
+                "POP  R0"
+            }
+            hexit_zoomed (560, 120, value, 0.75);
+
+            print_at (464, 140, "LoopEnd:");
+            asm
+            {
+                "PUSH R0"
+                "IN   R0,                  SPU_SoundLoopEnd"
+                "MOV  {value},             R0"
+                "POP  R0"
+            }
+            hexit_zoomed (560, 140, value, 0.75);
+
+            print_at (464, 160, "ChanStat:");
+            asm
+            {
+                "PUSH R0"
+                "IN   R0,                  SPU_ChannelState"
+                "MOV  {value},             R0"
+                "POP  R0"
+            }
+
+            switch (value)
+            {
+                case 0x40: // SPUChannelState_Stopped
+                    print_at (560, 160, "stopped");
+                    break;
+
+                case 0x41: // SPUChannelState_Paused
+                    print_at (560, 160, "paused");
+                    break;
+
+                case 0x42: // SPUChannelState_Playing
+                    print_at (560, 160, "playing");
+                    break;
+            }
+
+            print_at (464, 180, "ChnSet:");
+            asm
+            {
+                "PUSH R0"
+                "IN   R0,                  SPU_ChannelAssignedSound"
+                "MOV  {value},             R0"
+                "POP  R0"
+            }
+            itoa (value, data, 10);
+            print_at (560, 180, data);
+
+            print_at (464, 200, "ChanVol:");
+            asm
+            {
+                "PUSH R0"
+                "IN   R0,                  SPU_ChannelVolume"
+                "MOV  {fvalue},            R0"
+                "POP  R0"
+            }
+            ftoa (fvalue, data);
+            print_at (560, 200, data);
+
+            print_at (464, 220, "ChanSpd:");
+            asm
+            {
+                "PUSH R0"
+                "IN   R0,                  SPU_ChannelSpeed"
+                "MOV  {fvalue},            R0"
+                "POP  R0"
+            }
+            ftoa (fvalue, data);
+            print_at (560, 220, data);
+
+            print_at (464, 240, "ChanLoop:");
+            asm
+            {
+                "PUSH R0"
+                "IN   R0,                  SPU_ChannelLoopEnabled"
+                "MOV  {value},             R0"
+                "POP  R0"
+            }
+            
+            if (value             == 0)
+            {
+                print_at (560, 240, "false");
+            }
+            else
+            {
+                print_at (560, 240, "true");
+            }
+
+            print_at (464, 260, "ChanPos:");
+            asm
+            {
+                "PUSH R0"
+                "IN   R0,                  SPU_ChannelPosition"
+                "MOV  {fvalue},            R0"
+                "POP  R0"
+            }
+            ftoa (fvalue, data);
+            print_at (560, 260, data);
+            break;
+
+        ////////////////////////////////////////////////////////////////////////////////
+        //
+        // MODE_INPPORTS: if selected, INP ports and their values will be
+        // displayed
+        //
+        case MODE_INPPORTS:
+            print_zoomed_at (464, 0, "INP port value", 1.0);
+            select_region   (region_divider_h);
+            draw_region_at  (464, 20);
+            draw_region_at  (560, 20);
+
+            print_at (464, 20, "Gamepad:");
+            select_gamepad (gamepad);
+            itoa (gamepad, data, 10);
+            print_at (560, 20, data);
+
+            print_zoomed_at (464, 40, "Connected:", 0.75);
+            asm
+            {
+                "PUSH R0"
+                "IN   R0,      INP_GamepadConnected"
+                "MOV  {value}, R0"
+                "POP  R0"
+            }
+
+            if (value             == 1)
+            {
+                print_at (560, 40, "true");
+            }
+            else
+            {
+                print_at (560, 40, "false");
+            }
+
+            print_at (464, 60, "Left:");
+            asm
+            {
+                "PUSH R0"
+                "IN   R0,      INP_GamepadLeft"
+                "MOV  {value}, R0"
+                "POP  R0"
+            }
+            itoa (value, data, 10);
+            print_at (560, 60, data);
+
+            print_at (464, 80, "Right:");
+            asm
+            {
+                "PUSH R0"
+                "IN   R0,      INP_GamepadRight"
+                "MOV  {value}, R0"
+                "POP  R0"
+            }
+            itoa (value, data, 10);
+            print_at (560, 80, data);
+
+            print_at (464, 100, "Up:");
+            asm
+            {
+                "PUSH R0"
+                "IN   R0,      INP_GamepadUp"
+                "MOV  {value}, R0"
+                "POP  R0"
+            }
+            itoa (value, data, 10);
+            print_at (560, 100, data);
+
+            print_at (464, 120, "Down:");
+            asm
+            {
+                "PUSH R0"
+                "IN   R0,      INP_GamepadDown"
+                "MOV  {value}, R0"
+                "POP  R0"
+            }
+            itoa (value, data, 10);
+            print_at (560, 120, data);
+
+            print_at (464, 140, "Start:");
+            asm
+            {
+                "PUSH R0"
+                "IN   R0,      INP_GamepadButtonStart"
+                "MOV  {value}, R0"
+                "POP  R0"
+            }
+            itoa (value, data, 10);
+            print_at (560, 140, data);
+
+            print_at (464, 160, "A:");
+            asm
+            {
+                "PUSH R0"
+                "IN   R0,      INP_GamepadButtonA"
+                "MOV  {value}, R0"
+                "POP  R0"
+            }
+            itoa (value, data, 10);
+            print_at (560, 160, data);
+
+            print_at (464, 180, "B:");
+            asm
+            {
+                "PUSH R0"
+                "IN   R0,      INP_GamepadButtonB"
+                "MOV  {value}, R0"
+                "POP  R0"
+            }
+            itoa (value, data, 10);
+            print_at (560, 180, data);
+
+            print_at (464, 200, "X:");
+            asm
+            {
+                "PUSH R0"
+                "IN   R0,      INP_GamepadButtonX"
+                "MOV  {value}, R0"
+                "POP  R0"
+            }
+            itoa (value, data, 10);
+            print_at (560, 200, data);
+
+            print_at (464, 220, "Y:");
+            asm
+            {
+                "PUSH R0"
+                "IN   R0,      INP_GamepadButtonY"
+                "MOV  {value}, R0"
+                "POP  R0"
+            }
+            itoa (value, data, 10);
+            print_at (560, 220, data);
+
+            print_at (464, 240, "L:");
+            asm
+            {
+                "PUSH R0"
+                "IN   R0,      INP_GamepadButtonL"
+                "MOV  {value}, R0"
+                "POP  R0"
+            }
+            itoa (value, data, 10);
+            print_at (560, 240, data);
+
+            print_at (464, 260, "R:");
+            asm
+            {
+                "PUSH R0"
+                "IN   R0,      INP_GamepadButtonR"
+                "MOV  {value}, R0"
+                "POP  R0"
+            }
+            itoa (value, data, 10);
+            print_at (560, 260, data);
+
+            select_gamepad (DEBUG_GAMEPAD);
+        break;
+    }
+}
