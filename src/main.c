@@ -22,6 +22,7 @@ void main (void)
     int     *coffset;     // pointer to C code offset array
     int     *ccode;       // pointer to embedded C code
     int     *ctmp;        // pointer to embedded C code
+    int     *cotmp;       // pointer to embedded C code offset
     int      slen;
     int      opos;
     int      framestop;
@@ -46,9 +47,11 @@ void main (void)
     int      dstreg;
     int      port;
     int    **mem;
-	int [64] backtrace;
-	int      btrace;
-	int      btstart;
+    int [64] backtrace;
+    int      btrace;
+    int      btstart;
+    int [8]  chistory;     // previous instructions to display
+    int      ccount;       // tracking history array content quantity
 
     ////////////////////////////////////////////////////////////////////////////////////
     //
@@ -236,6 +239,7 @@ void main (void)
     // continually take us from instruction to instruction.
     //
     count                              = 0;
+    ccount                             = 0;
     modeflag                           = MODE_NONE; // no content view by default
     memstart                           = 0x003FFFF0;
     cardstart                          = 0x30000000;
@@ -244,14 +248,14 @@ void main (void)
     continueflag                       = CONTINUE_NONE;
     clearflag                          = FALSE;
     waitflag                           = FALSE;
-	for (index                         = 0;
-	     index                        <  64;
-		 index                         = index + 1)
-	{
-		backtrace[index]               = -1;
-	}
-	btrace                             = 0;
-	btstart                            = 0;
+    for (index                         = 0;
+         index                        <  64;
+         index                         = index + 1)
+    {
+        backtrace[index]               = -1;
+    }
+    btrace                             = 0;
+    btstart                            = 0;
     while (1)
     {
         ////////////////////////////////////////////////////////////////////////////////
@@ -357,7 +361,49 @@ void main (void)
 
         ////////////////////////////////////////////////////////////////////////////////
         //
-        // obtain the next instruction from our CART offset
+        // C: update the C history array, cycling out the old, bringing in the
+        // new as needed
+        //
+        if (ccount                    == 8) // buffer the previous 7 instructions,
+        {                                   // cycling off the ones as needed
+            for (index                 = 1;
+                 index                <  8;
+                 index                 = index + 1)
+            {
+                chistory[index-1]      = chistory[index]; // oldest one goes away
+            }
+            ccount                     = ccount - 1; // allow new instruction
+        }
+
+        ////////////////////////////////////////////////////////////////////////////////
+        //
+        // C: if C debugging is available, tend to the chistory array, filling it
+        // ONLY with those offsets that actually match an available C line string
+        //
+        if (codemode                  == DEBUG_C)
+        {
+            address                    = coffset + 1;
+            opos                       = *coffset; // how many offsets
+            ctmp                       = ccode; // point at first string offset
+            slen                       = *(ctmp-1); // get the string length
+            for (pos                   = 0;
+                 pos                  <  opos;
+                 pos                   = pos + 1)
+            {
+                value                  = *address;
+                if ((int)offset       == value)
+                {
+                    chistory[ccount]   = (int) offset;
+                    ccount             = ccount + 1;
+                    break;
+                }
+            }
+        }
+
+        ////////////////////////////////////////////////////////////////////////////////
+        //
+        // ASM: obtain the next instruction from our CART offset (always happens
+        // regardless of debugging mode, since this is what occurs on the CPU)
         //
         history[count]                 = (int) offset;
         count                          = count + 1;
@@ -387,15 +433,15 @@ void main (void)
             {
                 address                = (int *) history[index];
                 instruction            = *address;
-				immflag                = instruction & 0x02000000;
-				if (immflag           >  0)                         // immediate bit
-				{
-					immediate          = *(address+1);              // deref offset
-				}
-				else
-				{
-					immediate      = 0;                             // no immediate
-				}
+                immflag                = instruction & 0x02000000;
+                if (immflag           >  0)                         // immediate bit
+                {
+                    immediate          = *(address+1);              // deref offset
+                }
+                else
+                {
+                    immediate      = 0;                             // no immediate
+                }
 
                 if (index             == (count - 1))
                 {
@@ -472,28 +518,44 @@ void main (void)
                 else // DEBUG_C
                 {
                     asm { "_DEBUG_C:" }
-                    address            = coffset + 1;
-                    opos               = *coffset; // how many offsets
-                    ctmp               = ccode; // point at first string offset
-                    slen               = *(ctmp-1); // get the string length
+                    /*
                     for (pos           = 0;
                          pos          <  opos;
                          pos           = pos + 1)
                     {
                         value          = *address;
                         if ((int)offset    == value)
-                        {
+                        {*/
                             // slen, opos
                             //if (pos       == 3)
                             //    asm { "HLT" }
-                            zprint_zoomed_at (0, y, ctmp, 0.75);
+                    for (pos           = 0;
+                         pos          <  ccount;
+                         pos           = pos + 1)
+                    {
+                        // a match is found (actual assembly offset maps to actual line of C)
+                        if ((int) address == chistory[pos])
+                        {
+                            ctmp           = ccode; // point at first string
+                            slen           = *(ctmp-1); // get the string word length
+                            cotmp          = coffset + 1;
+                            for (pos       = 0;
+                                 pos      <  opos;
+                                 pos       = pos + 1)
+                            {
+                                if (*cotmp == (int) address) // found the offset
+                                {
+                                    zprint_zoomed_at (0, y, ctmp, 0.75);
+                                    break;
+                                }
+
+                                cotmp      = cotmp + 1;   // proceed to next offset
+                                ctmp       = ctmp + slen; // hop to the next string offset
+                                slen       = *ctmp;       // get the new string word length
+                                ctmp       = ctmp + 1;    // position at start of next string
+                            }
                             break;
                         }
-                        address        = address + 1;
-                        ctmp           = ctmp + slen;
-                        slen           = *ctmp; // get the string length
-                        ctmp           = ctmp + 1;
-                    //asm { "HLT" }
                     }
 
                     if (index         == (count - 1))
@@ -998,8 +1060,8 @@ void main (void)
                     code               = (int *) (ADDR_CART_REGISTERS + pos);
                     offset             = (int *) *code;
                 }
-				backtrace[btrace]      = (int) offset;
-				btrace                 = btrace + 1;
+                backtrace[btrace]      = (int) offset;
+                btrace                 = btrace + 1;
                 continue;
 
             ////////////////////////////////////////////////////////////////////////////
@@ -1014,8 +1076,8 @@ void main (void)
                 //
                 // CART SP, stored in RAM
                 //
-				btrace                 = btrace - 1;
-				backtrace[btrace]      = -1;
+                btrace                 = btrace - 1;
+                backtrace[btrace]      = -1;
                 code                   = (int *) (ADDR_CART_REGISTERS + 15);
                 mem                    = (int **) &(*code);
                 offset                 = (int *) **mem;

@@ -405,14 +405,15 @@ void draw_logo (int  modeflag, int *coffset)
     print_zoomed_at (100, 0,  "DOWN single steps, START to continue, X to escape", 0.50);
     print_zoomed_at (100, 16, "UP for content view (REGS, MEM, STACK, IOPORTS, none)", 0.50);
 
-	switch (modeflag)
-	{
-		case MODE_MEMORY:
-		case MODE_STACK:
-		case MODE_MEMPORTS:
-			print_zoomed_at (100, 32, "LEFT/RIGHT adjust by 16, L/R adjust by 256", 0.50);
-			break;
-	}
+    switch (modeflag)
+    {
+        case MODE_MEMORY:
+        case MODE_STACK:
+        case MODE_BACKTRACE:
+        case MODE_MEMPORTS:
+            print_zoomed_at (100, 32, "LEFT/RIGHT adjust by 16, L/R adjust by 256", 0.50);
+            break;
+    }
 
     if (coffset != NULL)
     {
@@ -451,6 +452,8 @@ void zprint_zoomed_at (int  drawing_x, int  drawing_y, int *text, float  factor)
     //
     while (symbol          != 0)
     {
+		asm { "MOV R10,          {symbol}"
+		      "MOV [0x003FFBAA], R10" }
         ////////////////////////////////////////////////////////////////////////////////
         //
         // symbol value is the region, select it and draw it
