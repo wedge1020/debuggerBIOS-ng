@@ -25,6 +25,7 @@ void main (void)
     int     *cotmp;       // pointer to embedded C code offset
     int      slen;
     int      opos;
+    int      value;
     int      framestop;
     int      stepflag;
     int      modeflag;
@@ -42,7 +43,6 @@ void main (void)
     int      gamepad;
     int      cardstart;
     int      color;
-    int      value;
     int      srcreg;
     int      dstreg;
     int      port;
