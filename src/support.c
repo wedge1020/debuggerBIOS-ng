@@ -442,9 +442,11 @@ void zprint_zoomed_at (int  drawing_x, int  drawing_y, int *text, float  factor)
     //
     // declare and initialize variables
     //
-    int  mask               = 0xFF000000;
-    int  shift              = 24;
-    int  symbol             = ((*text) & mask) >> shift;
+    int     pos             = 3;
+    int     mask            = 0x000000FF;
+    int     shift           = 0;
+    int     symbol          = -1;
+    int [4] word;
 
     ////////////////////////////////////////////////////////////////////////////////////
     //
@@ -452,48 +454,62 @@ void zprint_zoomed_at (int  drawing_x, int  drawing_y, int *text, float  factor)
     //
     while (symbol          != 0)
     {
-		asm { "MOV R10,          {symbol}"
-		      "MOV [0x003FFBAA], R10" }
-        ////////////////////////////////////////////////////////////////////////////////
-        //
-        // symbol value is the region, select it and draw it
-        //
-        select_region         (symbol);
-        set_drawing_scale     (factor,    1.0);
-        draw_region_zoomed_at (drawing_x, drawing_y);
-        
-        ////////////////////////////////////////////////////////////////////////////////
-        //
-        // advance in x, influenced by any scaling factor
-        //
-        if (factor         == 1.0)
+        asm { "MOV R10,          {symbol}"
+              "MOV [0x003FFBAA], R10" }
+        mask                = 0x000000FF;
+        shift               = 0;
+        for (pos            = 3;
+             pos           >= 0;
+             pos            = pos - 1)
         {
-            drawing_x      += bios_character_width;
-        }
-        else
-        {
-            drawing_x      += (bios_character_width * factor) + 1;
+            ////////////////////////////////////////////////////////////////////////////
+            //
+            // store into word array
+            //
+            word[pos]       = ((*text) & mask) >> shift;
+            word[pos]       = word[pos] & 0x000000FF;
+
+            ////////////////////////////////////////////////////////////////////////////
+            //
+            // adjust the bit mask and shift
+            //
+            mask            = mask << 8;
+            shift           = shift + 8;
         }
 
-        ////////////////////////////////////////////////////////////////////////////////
-        //
-        // adjust the bit mask and shift, resetting once we've exhausted
-        // the current word
-        //
-        mask                = mask >> 8;
-        shift               = shift - 8;
-        if (mask           == 0)
+        for (pos            = 0;
+             pos           <  4;
+             pos            = pos + 1)
         {
-            mask            = 0xFF000000;
-            shift           = 0;
-            text            = text + 1;
+            symbol          = word[pos];
+            if (symbol     == 0)
+            {
+                break;
+            }
+
+            ////////////////////////////////////////////////////////////////////////////
+            //
+            // symbol value is the region, select it and draw it
+            //
+            select_region         (symbol);
+            set_drawing_scale     (factor,    1.0);
+            draw_region_zoomed_at (drawing_x, drawing_y);
+            
+            ////////////////////////////////////////////////////////////////////////////
+            //
+            // advance in x, influenced by any scaling factor
+            //
+            if (factor     == 1.0)
+            {
+                drawing_x  += bios_character_width;
+            }
+            else
+            {
+                drawing_x  += (bios_character_width * factor) + 1;
+            }
         }
 
-        ////////////////////////////////////////////////////////////////////////////////
-        //
-        // obtain the next symbol in the string to process
-        //
-        symbol              = ((*text) & mask) >> shift;
+        text                = text + 1;
     }
 
     ////////////////////////////////////////////////////////////////////////////////////
