@@ -303,7 +303,7 @@ void print_zoomed_at (int  drawing_x, int  drawing_y, int *text, float  factor)
     // preserve previous texture selection
     //
     int  previous_texture   = get_selected_texture ();
-    int  previous_region    = get_selected_region ();
+    int  previous_region    = get_selected_region  ();
 
     ////////////////////////////////////////////////////////////////////////////////////
     //
@@ -414,40 +414,81 @@ void draw_logo (int *coffset)
     set_multiply_color (color_white);
 }
 
-void zprint_at (int  drawing_x, int  drawing_y, int *text)
+void zprint_zoomed_at (int  drawing_x, int  drawing_y, int *text, float  factor)
 {
-    // preserve previous texture selection (otherwise,
-    // bios texture will be selected after this function)
+    ////////////////////////////////////////////////////////////////////////////////////
+    //
+    // preserve previous texture and region selection
+    //
     int  previous_texture   = get_selected_texture ();
     int  previous_region    = get_selected_region  ();
 
+    ////////////////////////////////////////////////////////////////////////////////////
+    //
+    // select the BIOS texture
+    //
     select_texture (-1);
     
-    // begin drawing characters at the given position
-    int  mask               = 0x000000FF;
-    int  shift              = 0;
+    ////////////////////////////////////////////////////////////////////////////////////
+    //
+    // declare and initialize variables
+    //
+    int  mask               = 0xFF000000;
+    int  shift              = 24;
     int  symbol             = ((*text) & mask) >> shift;
 
+    ////////////////////////////////////////////////////////////////////////////////////
+    //
+    // keep going until we encounter a byte with 0x00 in it (end of string)
+    //
     while (symbol          != 0)
     {
-        select_region  (symbol);
-        draw_region_at (drawing_x, drawing_y);
-        drawing_x           = drawing_x + bios_character_width;
-        mask                = mask << 8;
-        if (mask           == 0)
+        ////////////////////////////////////////////////////////////////////////////////
+        //
+        // symbol value is the region, select it and draw it
+        //
+        select_region         (symbol);
+        set_drawing_scale     (factor,    1.0);
+        draw_region_zoomed_at (drawing_x, drawing_y);
+        
+        ////////////////////////////////////////////////////////////////////////////////
+        //
+        // advance in x, influenced by any scaling factor
+        //
+        if (factor         == 1.0)
         {
-            mask            = 0x000000FF;
-            shift           = 0;
-            text            = text + 1;
+            drawing_x      += bios_character_width;
         }
         else
         {
-            shift           = shift + 8;
+            drawing_x      += (bios_character_width * factor) + 1;
         }
+
+        ////////////////////////////////////////////////////////////////////////////////
+        //
+        // adjust the bit mask and shift, resetting once we've exhausted
+        // the current word
+        //
+        mask                = mask >> 8;
+        shift               = shift - 8;
+        if (mask           == 0)
+        {
+            mask            = 0xFF000000;
+            shift           = 0;
+            text            = text + 1;
+        }
+
+        ////////////////////////////////////////////////////////////////////////////////
+        //
+        // obtain the next symbol in the string to process
+        //
         symbol              = ((*text) & mask) >> shift;
     }
 
-    // restore previous texture selection
+    ////////////////////////////////////////////////////////////////////////////////////
+    //
+    // restore previous texture and region selection
+    //
     select_texture (previous_texture);
     select_region  (previous_region);
 }

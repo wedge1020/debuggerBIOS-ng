@@ -468,7 +468,7 @@ void main (void)
                             // slen, opos
                             //if (pos       == 3)
                             //    asm { "HLT" }
-                            print_at (0, y, ctmp);
+                            zprint_zoomed_at (0, y, ctmp, 0.75);
                             break;
                         }
                         address        = address + 1;
