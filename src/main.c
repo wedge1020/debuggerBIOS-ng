@@ -46,6 +46,9 @@ void main (void)
     int      dstreg;
     int      port;
     int    **mem;
+	int [64] backtrace;
+	int      btrace;
+	int      btstart;
 
     ////////////////////////////////////////////////////////////////////////////////////
     //
@@ -241,6 +244,14 @@ void main (void)
     continueflag                       = CONTINUE_NONE;
     clearflag                          = FALSE;
     waitflag                           = FALSE;
+	for (index                         = 0;
+	     index                        <  64;
+		 index                         = index + 1)
+	{
+		backtrace[index]               = -1;
+	}
+	btrace                             = 0;
+	btstart                            = 0;
     while (1)
     {
         ////////////////////////////////////////////////////////////////////////////////
@@ -281,7 +292,7 @@ void main (void)
         if ((continueflag             == CONTINUE_ENABLED) &&
             (clearflag                == TRUE))
         {
-            views (modeflag, memstart, stackgap, gamepad, cardstart);
+            views (modeflag, memstart, stackgap, gamepad, cardstart, backtrace, btstart);
             clearflag                  = FALSE;
         }
 
@@ -361,7 +372,7 @@ void main (void)
             //
             // draw "debuggerBIOS" logo in top left, with instructions
             //
-            draw_logo (coffset);
+            draw_logo (modeflag, coffset);
 
             ////////////////////////////////////////////////////////////////////////////
             //
@@ -376,6 +387,15 @@ void main (void)
             {
                 address                = (int *) history[index];
                 instruction            = *address;
+				immflag                = instruction & 0x02000000;
+				if (immflag           >  0)                         // immediate bit
+				{
+					immediate          = *(address+1);              // deref offset
+				}
+				else
+				{
+					immediate      = 0;                             // no immediate
+				}
 
                 if (index             == (count - 1))
                 {
@@ -427,18 +447,14 @@ void main (void)
                     //    "mov   {immediate}, R1"
                     // }
                     //
-                    immflag            = instruction & 0x02000000;
+                    //immflag            = instruction & 0x02000000;
                     if (immflag       >  0)                         // immediate bit
                     {
                         address        = address + 1;
                         hexit_zoomed (0, (y + 18), (int)address, 0.75); // immediate
 
-                        immediate      = *(address);                // deref offset
+//                        immediate      = *(address);                // deref offset
                         hexit_zoomed (88, (y + 18), immediate, 0.75);
-                    }
-                    else
-                    {
-                        immediate      = 0;                         // no immediate
                     }
 
                     decode (176, y, instruction, immediate);
@@ -479,6 +495,13 @@ void main (void)
                         ctmp           = ctmp + 1;
                     //asm { "HLT" }
                     }
+
+                    if (index         == (count - 1))
+                    {
+                        set_multiply_color (color_white);
+                    }
+
+                    y                  = y + 18;
                 }
             }
 
@@ -486,7 +509,7 @@ void main (void)
             //
             // resource view logic
             //
-            views (modeflag, memstart, stackgap, gamepad, cardstart);
+            views (modeflag, memstart, stackgap, gamepad, cardstart, backtrace, btstart);
 
             ////////////////////////////////////////////////////////////////////////////
             //
@@ -557,6 +580,14 @@ void main (void)
                         stackgap       = 1;
                     }
                 }
+                else if (modeflag     == MODE_BACKTRACE)
+                {
+                    btstart            = btstart - 16;
+                    if (btstart       <  0)
+                    {
+                        btstart        = 48;
+                    }
+                }
                 else if (modeflag     == MODE_INPPORTS)
                 {
                     gamepad            = (gamepad - 1) % 4;
@@ -610,6 +641,10 @@ void main (void)
                         stackgap       = 1;
                     }
                 }
+                else if (modeflag     == MODE_BACKTRACE)
+                {
+                    btstart            = 0;
+                }
                 else if (modeflag     == MODE_INPPORTS)
                 {
                     gamepad            = 0;
@@ -659,6 +694,14 @@ void main (void)
                         stackgap       = 18;
                     }
                 }
+                else if (modeflag     == MODE_BACKTRACE)
+                {
+                    btstart            = btstart  + 16;
+                    if (btstart       >  63)
+                    {
+                        btstart        = 0;
+                    }
+                }
                 else if (modeflag     == MODE_INPPORTS)
                 {
                     gamepad            = (gamepad + 1) % 4;
@@ -666,7 +709,7 @@ void main (void)
                 else if (modeflag     == MODE_MEMPORTS)
                 {
                     cardstart          = cardstart + 16;
-                    if (cardstart     <  0x3003FFFF)
+                    if (cardstart     >  0x3003FFFF)
                     {
                         cardstart      = 0x30000000;
                     }
@@ -708,6 +751,10 @@ void main (void)
                         stackgap       = 18;
                     }
                 }
+                else if (modeflag     == MODE_BACKTRACE)
+                {
+                    btstart            = 48;
+                }
                 else if (modeflag     == MODE_INPPORTS)
                 {
                     gamepad            = 3;
@@ -715,7 +762,7 @@ void main (void)
                 else if (modeflag     == MODE_MEMPORTS)
                 {
                     cardstart          = cardstart + 256;
-                    if (cardstart     <  0x3003FF00)
+                    if (cardstart     >  0x3003FF00)
                     {
                         cardstart      = 0x30000000;
                     }
@@ -951,6 +998,8 @@ void main (void)
                     code               = (int *) (ADDR_CART_REGISTERS + pos);
                     offset             = (int *) *code;
                 }
+				backtrace[btrace]      = (int) offset;
+				btrace                 = btrace + 1;
                 continue;
 
             ////////////////////////////////////////////////////////////////////////////
@@ -965,6 +1014,8 @@ void main (void)
                 //
                 // CART SP, stored in RAM
                 //
+				btrace                 = btrace - 1;
+				backtrace[btrace]      = -1;
                 code                   = (int *) (ADDR_CART_REGISTERS + 15);
                 mem                    = (int **) &(*code);
                 offset                 = (int *) **mem;

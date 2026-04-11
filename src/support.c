@@ -373,7 +373,7 @@ void print_zoomed_at (int  drawing_x, int  drawing_y, int *text, float  factor)
     select_region  (previous_region);
 }
         
-void draw_logo (int *coffset)
+void draw_logo (int  modeflag, int *coffset)
 {
     set_blending_mode (blending_alpha);
     set_multiply_color (0xFFFFFFFF);
@@ -404,11 +404,19 @@ void draw_logo (int *coffset)
     set_multiply_color (color_yellow);
     print_zoomed_at (100, 0,  "DOWN single steps, START to continue, X to escape", 0.50);
     print_zoomed_at (100, 16, "UP for content view (REGS, MEM, STACK, IOPORTS, none)", 0.50);
-    print_zoomed_at (100, 32, "LEFT/RIGHT adjust by 16, L/R adjust by 256", 0.50);
+
+	switch (modeflag)
+	{
+		case MODE_MEMORY:
+		case MODE_STACK:
+		case MODE_MEMPORTS:
+			print_zoomed_at (100, 32, "LEFT/RIGHT adjust by 16, L/R adjust by 256", 0.50);
+			break;
+	}
 
     if (coffset != NULL)
     {
-        print_zoomed_at (395, 0, ", Y for mode", 0.50);
+        print_zoomed_at (393, 0, ", Y for mode", 0.50);
     }
 
     set_multiply_color (color_white);

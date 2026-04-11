@@ -150,16 +150,17 @@ struct error_message
 //
 // Pre-processor: debugger view modes
 //
-#define  MODE_NONE     0
-#define  MODE_REGISTER 1
-#define  MODE_MEMORY   2
-#define  MODE_STACK    3
-#define  MODE_GPUPORTS 4
-#define  MODE_SPUPORTS 5
-#define  MODE_INPPORTS 6
-#define  MODE_CARPORTS 7
-#define  MODE_MEMPORTS 8
-#define  MAX_MODES     9
+#define  MODE_NONE       0
+#define  MODE_REGISTER   1
+#define  MODE_MEMORY     2
+#define  MODE_STACK      3
+#define  MODE_BACKTRACE  4
+#define  MODE_GPUPORTS   5
+#define  MODE_SPUPORTS   6
+#define  MODE_INPPORTS   7
+#define  MODE_CARPORTS   8
+#define  MODE_MEMPORTS   9
+#define  MAX_MODES       10
 
 ////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -256,9 +257,9 @@ void  print_hex_value     (int  x,     int  y,   int *name,        int    value)
 void  print_zoomed_at     (int  x,     int  y,   int *text,        float  factor);
 void  zprint_zoomed_at    (int  x,     int  y,   int *text,        float  factor);
 void  init_regions        (void);
-void  views               (int  mode,  int  mem, int  stack,       int    gamepad,  int  cardstart);
+void  views               (int  mode,  int  mem, int  stack,       int    gamepad,  int  card, int *bt, int btstart);
 bool  cartridge_connected ();
-void  draw_logo           (int *coffset);
+void  draw_logo           (int  mode,  int *coffset);
 void  request_cartridge   ();
 
 #endif
