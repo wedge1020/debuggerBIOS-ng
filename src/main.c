@@ -39,6 +39,7 @@ void main (void)
     int      memstart;
     int      stackgap;
     int      gamepad;
+    int      cardstart;
     int      color;
     int      value;
     int      srcreg;
@@ -234,6 +235,7 @@ void main (void)
     count                              = 0;
     modeflag                           = MODE_NONE; // no content view by default
     memstart                           = 0x003FFFF0;
+    cardstart                          = 0x30000000;
     stackgap                           = 9;
     exitflag                           = FALSE;
     continueflag                       = CONTINUE_NONE;
@@ -279,7 +281,7 @@ void main (void)
         if ((continueflag             == CONTINUE_ENABLED) &&
             (clearflag                == TRUE))
         {
-            views (modeflag, memstart, stackgap, gamepad);
+            views (modeflag, memstart, stackgap, gamepad, cardstart);
             clearflag                  = FALSE;
         }
 
@@ -484,7 +486,7 @@ void main (void)
             //
             // resource view logic
             //
-            views (modeflag, memstart, stackgap, gamepad);
+            views (modeflag, memstart, stackgap, gamepad, cardstart);
 
             ////////////////////////////////////////////////////////////////////////////
             //
@@ -563,6 +565,14 @@ void main (void)
                         gamepad        = 3;
                     }
                 }
+                else if (modeflag     == MODE_MEMPORTS)
+                {
+                    cardstart          = cardstart - 16;
+                    if (cardstart     <  0x30000000)
+                    {
+                        cardstart      = 0x3003FFF0;
+                    }
+                }
             }
 
             ////////////////////////////////////////////////////////////////////////////
@@ -603,6 +613,14 @@ void main (void)
                 else if (modeflag     == MODE_INPPORTS)
                 {
                     gamepad            = 0;
+                }
+                else if (modeflag     == MODE_MEMPORTS)
+                {
+                    cardstart          = cardstart - 256;
+                    if (cardstart     <  0x30000000)
+                    {
+                        cardstart      = 0x3003FF00;
+                    }
                 }
             }
 
@@ -645,6 +663,14 @@ void main (void)
                 {
                     gamepad            = (gamepad + 1) % 4;
                 }
+                else if (modeflag     == MODE_MEMPORTS)
+                {
+                    cardstart          = cardstart + 16;
+                    if (cardstart     <  0x3003FFFF)
+                    {
+                        cardstart      = 0x30000000;
+                    }
+                }
             }
 
             ////////////////////////////////////////////////////////////////////////////
@@ -685,6 +711,14 @@ void main (void)
                 else if (modeflag     == MODE_INPPORTS)
                 {
                     gamepad            = 3;
+                }
+                else if (modeflag     == MODE_MEMPORTS)
+                {
+                    cardstart          = cardstart + 256;
+                    if (cardstart     <  0x3003FF00)
+                    {
+                        cardstart      = 0x30000000;
+                    }
                 }
             }
 

@@ -157,7 +157,9 @@ struct error_message
 #define  MODE_GPUPORTS 4
 #define  MODE_SPUPORTS 5
 #define  MODE_INPPORTS 6
-#define  MAX_MODES     7
+#define  MODE_CARPORTS 7
+#define  MODE_MEMPORTS 8
+#define  MAX_MODES     9
 
 ////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -254,7 +256,7 @@ void  print_hex_value     (int  x,     int  y,   int *name,        int    value)
 void  print_zoomed_at     (int  x,     int  y,   int *text,        float  factor);
 void  zprint_zoomed_at    (int  x,     int  y,   int *text,        float  factor);
 void  init_regions        (void);
-void  views               (int  mode,  int  mem, int  stack,       int    gamepad);
+void  views               (int  mode,  int  mem, int  stack,       int    gamepad,  int  cardstart);
 bool  cartridge_connected ();
 void  draw_logo           (int *coffset);
 void  request_cartridge   ();

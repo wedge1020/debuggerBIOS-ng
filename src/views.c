@@ -2,7 +2,7 @@
 //
 // views(): process the individual resource views
 //
-void  views (int  modeflag, int  memstart, int  stackgap, int  gamepad)
+void  views (int  modeflag, int  memstart, int  stackgap, int  gamepad, int  cardstart)
 {
     ////////////////////////////////////////////////////////////////////////////////////
     //
@@ -727,6 +727,118 @@ void  views (int  modeflag, int  memstart, int  stackgap, int  gamepad)
             print_at (560, 260, data);
 
             select_gamepad (DEBUG_GAMEPAD);
-        break;
+            break;
+
+        ////////////////////////////////////////////////////////////////////////////////
+        //
+        // MODE_CARPORTS: if selected, CAR ports and their values will be
+        // displayed
+        //
+        case MODE_CARPORTS:
+            print_zoomed_at (464, 0, "CAR port value", 1.0);
+            select_region   (region_divider_h);
+            draw_region_at  (464, 20);
+            draw_region_at  (560, 20);
+
+            print_at (464, 40, "Connect:");
+            asm
+            {
+                "PUSH R0"
+                "IN   R0,      CAR_Connected"
+                "MOV  {value}, R0"
+                "POP  R0"
+            }
+
+            if (value        == 0)
+            {
+                print_at (560, 40, "false");
+            }
+            else
+            {
+                print_at (560, 40, "true");
+            }
+
+            print_at (464, 60, "ROMSize:");
+            asm
+            {
+                "PUSH R0"
+                "IN   R0,      CAR_ProgramROMSize"
+                "MOV  {value}, R0"
+                "POP  R0"
+            }
+            hexit_zoomed (560, 60, value, 0.75);
+
+            print_at (464, 80, "#VTEX:");
+            asm
+            {
+                "PUSH R0"
+                "IN   R0,      CAR_NumberOfTextures"
+                "MOV  {value}, R0"
+                "POP  R0"
+            }
+            itoa (value, data, 10);
+            print_at (560, 80, data);
+
+            print_at (464, 100, "#VSND:");
+            asm
+            {
+                "PUSH R0"
+                "IN   R0,      CAR_NumberOfSounds"
+                "MOV  {value}, R0"
+                "POP  R0"
+            }
+            itoa (value, data, 10);
+            print_at (560, 100, data);
+            break;
+
+        ////////////////////////////////////////////////////////////////////////////////
+        //
+        // MODE_MEMPORTS: if selected, the MEM port and connected MEMCard data
+        // will be displayed, with similar memory-adjustment controls available
+        //
+        case MODE_MEMPORTS:
+            print_zoomed_at (464, 0, "MEM port value", 1.0);
+            select_region   (region_divider_h);
+            draw_region_at  (464, 20);
+            draw_region_at  (560, 20);
+
+            asm
+            {
+                "PUSH R0"
+                "IN   R0,      MEM_Connected"
+                "MOV  {value}, R0"
+                "POP  R0"
+            }
+
+            if (value             == 0)
+            {
+                print_at (464, 40, "Connect:");
+                print_at (560, 40, "false");
+            }
+            else
+            {
+                address            = (int *) 0x30000000;
+                print_at (464, 40, address); // display MEMC title
+
+                for (index         = 0;
+                     index        <  16;
+                     index         = index + 1)
+                {
+                    ////////////////////////////////////////////////////////////////////
+                    //
+                    // display address
+                    //
+                    hexit_zoomed    (464, (20+(index * 20)), (cardstart+index), 0.75);
+                    print_zoomed_at (544, (20+(index * 20)), ":", 0.75); 
+
+                    ////////////////////////////////////////////////////////////////////
+                    //
+                    // display value at address
+                    //
+                    address            = (int *) (cardstart+index);
+                    hexit_zoomed (560, (20+(index * 20)), *(address), 0.75);
+                }
+            }
+            break;
     }
 }
