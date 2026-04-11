@@ -2,7 +2,7 @@
 //
 // views(): process the individual resource views
 //
-void  views (int  modeflag, int  memstart, int  stackgap, int  gamepad, int  cardstart, int *backtrace, int  btstart)
+void  views (int  modeflag, int *offset, int  memstart, int  stackgap, int  gamepad, int  cardstart, int *backtrace, int  btstart)
 {
     ////////////////////////////////////////////////////////////////////////////////////
     //
@@ -58,14 +58,26 @@ void  views (int  modeflag, int  memstart, int  stackgap, int  gamepad, int  car
                 {
                     data[3]        = ':';
                 }
-                print_at (490, 20 + (index * 20), data); 
+                print_at (490, 18 + (index * 18), data); 
 
                 ////////////////////////////////////////////////////////////////////
                 //
                 // display CART register value (backed up in memory)
                 //
                 address            = (int *) ADDR_CART_REGISTERS;
-                hexit_zoomed (540, 20 + (index * 20), *(address+index), 0.75);
+                hexit_zoomed (540, 18 + (index * 18), *(address+index), 0.75);
+            }
+
+            print_at (490, 18 + (index * 18), "IP:");
+            hexit_zoomed (540, 18 + (index * 18), (int) offset, 0.75);
+            print_at (490, 18 + ((index+1) * 18), "IR:");
+            value                  = *offset;
+            hexit_zoomed (540, 18 + ((index+1) * 18), value, 0.75);
+            if ((value & 0x02000000) >  0)
+            {
+                value                 = *(offset+1);
+                print_at (490, 18 + ((index+2) * 18), "IV:");
+                hexit_zoomed (540, 18 + ((index+2) * 18), value, 0.75);
             }
             break;
 
@@ -80,21 +92,21 @@ void  views (int  modeflag, int  memstart, int  stackgap, int  gamepad, int  car
             draw_region_at  (464, 20);
             draw_region_at  (540, 20);
 
-			pos                    = 20;
+            pos                    = 20;
             for (index             = 15;
                  index            >= 0;
                  index             = index - 1)
             {
-				if (-1            == *(backtrace+(btstart+index)))
-				{
-					continue;
-				}
+                if (-1            == *(backtrace+(btstart+index)))
+                {
+                    continue;
+                }
                 print_zoomed_at (464, pos, "[", 0.75);
                 itoa            ((index + btstart), data, 10);
                 print_zoomed_at (474, pos, data, 0.75);
                 print_zoomed_at (494, pos, "]:", 0.75);
                 hexit_zoomed    (524, pos, *(backtrace+(btstart+index)), 0.75);
-				pos                = pos + 20;
+                pos                = pos + 20;
             }
             break;
 

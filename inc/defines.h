@@ -249,15 +249,15 @@ struct opcode_t
 // function prototypes
 //
 void  draw_message_screen (int *title, int *msg);
-void  decode              (int  x,     int  y,   int  instruction, int    immediate);
-void  hexit_zoomed        (int  x,     int  y,   int  value,       float  factor);
-void  hexit               (int  x,     int  y,   int  value);
-void  portit              (int  x,     int  y,   int  value);
-void  print_hex_value     (int  x,     int  y,   int *name,        int    value);
-void  print_zoomed_at     (int  x,     int  y,   int *text,        float  factor);
-void  zprint_zoomed_at    (int  x,     int  y,   int *text,        float  factor);
+void  decode              (int  x,     int  y,    int  instruction, int    immediate);
+void  hexit_zoomed        (int  x,     int  y,    int  value,       float  factor);
+void  hexit               (int  x,     int  y,    int  value);
+void  portit              (int  x,     int  y,    int  value);
+void  print_hex_value     (int  x,     int  y,    int *name,        int    value);
+void  print_zoomed_at     (int  x,     int  y,    int *text,        float  factor);
+void  zprint_zoomed_at    (int  x,     int  y,    int *text,        float  factor);
 void  init_regions        (void);
-void  views               (int  mode,  int  mem, int  stack,       int    gamepad,  int  card, int *bt, int btstart);
+void  views               (int  mode,  int *addr, int  mem,         int  stack,       int    gamepad,  int  card, int *bt, int btstart);
 bool  cartridge_connected ();
 void  draw_logo           (int  mode,  int *coffset);
 void  request_cartridge   ();

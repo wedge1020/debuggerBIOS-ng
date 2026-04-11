@@ -296,7 +296,7 @@ void main (void)
         if ((continueflag             == CONTINUE_ENABLED) &&
             (clearflag                == TRUE))
         {
-            views (modeflag, memstart, stackgap, gamepad, cardstart, backtrace, btstart);
+            views (modeflag, offset, memstart, stackgap, gamepad, cardstart, backtrace, btstart);
             clearflag                  = FALSE;
         }
 
@@ -571,7 +571,7 @@ void main (void)
             //
             // resource view logic
             //
-            views (modeflag, memstart, stackgap, gamepad, cardstart, backtrace, btstart);
+            views (modeflag, offset, memstart, stackgap, gamepad, cardstart, backtrace, btstart);
 
             ////////////////////////////////////////////////////////////////////////////
             //
