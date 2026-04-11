@@ -97,16 +97,25 @@ Functionality includes:
     * debugger is still present, and single-step can be re-engaged
     * press `START` again to return to single-step mode
   * escape mode (`X` button), leaving the debugger entirely
+  * toggle between C and Assembly mode (`Y` button)
+    * only when C debug information is found, otherwith ASM only
   * user-cycled display of various system resources (via `UP`):
     * CART register array
     * console RAM (range adjustable)
     * stack (based on `BP` and `SP` register values)
+    * backtrace
     * GPU IOPorts
     * SPU IOPorts
     * INP IOPorts
+    * CAR IOPorts
+    * MEM IOPorts and contents
 
 Through  the use  of  the  configured gamepad  (defaults  to gamepad  0),
 various debugger features can be utilized and accessed.
+
+NOTE:  the   debuggerBIOS-ng  gamepad  can  actually   be  configured  by
+editing  the  `config.h`   file  in  the  base  of   the  repository  and
+rebuilding/reinstalling the BIOS.
 
 ## LIMITATIONS
 
@@ -200,9 +209,13 @@ through, including:
   * CART register view
   * system RAM view (just page 0, from 0x00000000 to 0x003FFFFF)
   * stack view (based on `BP` and `SP` values)
+  * backtrace (showing subroutine/function call depth)
   * select GPU IOPorts
   * select SPU IOPorts
   * INP IOPorts
+  * CAR IOPorts
+  * MEM IOPort and contents
+    * MEMCARD title is displayed before raw contents
 
 By continuing to  press `UP`, each mode will by  cycled through. Once the
 last mode  has been cycled, it  returns to being off,  until further `UP`
@@ -325,6 +338,21 @@ code                 = (int *) (0x003FFBA0 + 15);
 mem                  = (int **) &(*code);
 **mem                = (int) offset; // **mem is actual data storage
 ```
+
+### BACKTRACE FUNCTIONALITY
+
+The rudimentary  backtrace functionality is accomplished  by inserting or
+removing  the  subroutine offset  in  question  when  a `CALL`  or  `RET`
+is  encountered,  adding  this  logic  to  the  emulation  of  those  two
+instructions. Nice and neat.
+
+The  debugger currently  supports  up  to 64  levels  of backtracing  for
+subroutines.  Likely far  in  excess  of what  will  be  needed for  most
+debugging sessions.
+
+The backtrace view  can be adjusted in the same  manner as memory, stack,
+and memcard views: left/right and L/R buttons to adjust offsets by 16 and
+256, respectively.
 
 ### INSTRUCTION TRIGGERS
 
@@ -495,7 +523,6 @@ BSD License, which full text is the following:
  
 ```
     Copyright 2026 Matthew Haas (debuggerBIOS-ng)
-    Copyright 2026 SUNY CCC Spring 2026 Computer Organization Class
     All rights reserved.
 ```
 
