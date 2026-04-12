@@ -589,6 +589,7 @@ void main (void)
                             {
                                 if (*cotmp == (int) address) // found the offset
                                 {*/
+					asm { "_DEF:" }
                     address            = (int *) clhistory[index];
                     zprint_zoomed_at (0, y, address, 0.75);
                                    /* break;
