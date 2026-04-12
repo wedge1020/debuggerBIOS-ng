@@ -24,7 +24,7 @@ void main (void)
     int     *ctmp;        // pointer to embedded C code
     int     *cotmp;       // pointer to embedded C code offset
     int      slen;
-    int      opos;
+    int      num_offsets;
     int      value;
     int      framestop;
     int      stepflag;
@@ -52,6 +52,7 @@ void main (void)
     int      btstart;
     int [8]  chistory;     // previous instructions to display
     int      ccount;       // tracking history array content quantity
+	int [8]  clhistory;
     int      iter;
 
     ////////////////////////////////////////////////////////////////////////////////////
@@ -372,6 +373,7 @@ void main (void)
                  index                 = index + 1)
             {
                 chistory[index-1]      = chistory[index]; // oldest one goes away
+                clhistory[index-1]     = clhistory[index]; // oldest one goes away
             }
             ccount                     = ccount - 1; // allow new instruction
         }
@@ -384,20 +386,50 @@ void main (void)
         if (codemode                  == DEBUG_C)
         {
             address                    = coffset + 1;
-            opos                       = *coffset;  // how many offsets
+            num_offsets                = *coffset;  // how many offsets
             ctmp                       = ccode;     // point at first string offset
             slen                       = *(ctmp-1); // get the string length
             for (pos                   = 0;
-                 pos                  <  opos;
+                 pos                  <  num_offsets;
                  pos                   = pos + 1)
             {
+                ////////////////////////////////////////////////////////////////////////
+                //
+                // address is the address within the array of offsets with
+                // links to C code. The variable value is the actual offset
+                // we can use for comparison purposes
+                //
                 value                  = *address;
+
+                ////////////////////////////////////////////////////////////////////////
+                //
+                // does the current address value match the current instruction
+                // offset being processed? If so, we have a match
+                //
                 if (value             == (int) offset)
                 {
+					asm { "_ABC:" }
                     chistory[ccount]   = (int) offset;
+					clhistory[ccount]  = (int) ccode;
                     ccount             = ccount + 1;
                     break;
                 }
+
+                ////////////////////////////////////////////////////////////////////////
+                //
+                // As the offsets are in incrementing order, once value exceeds
+                // the offset in question, we do not need to go any further:
+                // bail out
+                //
+                else if (value        >  (int) offset)
+                {
+                    break;
+                }
+
+                address                = address + 1;
+				ctmp                   = ctmp + slen; // hop to the next string offset
+				slen                   = *ctmp;       // get the new string word length
+				ctmp                   = ctmp + 1;    // position at start of next string
             }
         }
 
@@ -415,6 +447,7 @@ void main (void)
         //
         while (framestop              != 0) // single step loop
         {
+            stepflag                   = TRUE; // short-circuit pressing of down
             ////////////////////////////////////////////////////////////////////////////
             //
             // draw "debuggerBIOS" logo in top left, with instructions
@@ -428,46 +461,46 @@ void main (void)
             // fading-from-white gradient
             //
             y                          = 50;
-            for (index                 = 0;
-                 index                <  count;
-                 index                 = index + 1)
-            {
-                address                = (int *) history[index];
-                instruction            = *address;
-                immflag                = instruction & 0x02000000;
-                if (immflag           >  0)                         // immediate bit
-                {
-                    immediate          = *(address+1);              // deref offset
-                }
-                else
-                {
-                    immediate      = 0;                             // no immediate
-                }
+			if (codemode              == DEBUG_ASM)
+			{
+				for (index             = 0;
+					 index            <  count;
+					 index             = index + 1)
+				{
+					address            = (int *) history[index];
+					instruction        = *address;
+					immflag            = instruction & 0x02000000;
+					if (immflag       >  0)                         // immediate bit
+					{
+						immediate      = *(address+1);              // deref offset
+					}
+					else
+					{
+						immediate      = 0;                             // no immediate
+					}
 
-                if (index             == (count - 1))
-                {
-                    set_multiply_color (color_yellow);
-                }
-                else
-                {
-                    ////////////////////////////////////////////////////////////////////
-                    //
-                    // calculate white  fade to black: as  we are dealing
-                    // with raw binary  data store on the  machine, it is
-                    // encoded in the machine's  little endian format, so
-                    // the word  representing the RGBA value  is actually
-                    // of the form ABGR (note the shifts below)
-                    //
-                    value              = 0x3F + (8 * index);
-                    color              = (((value + (index * 24))));       // RED
-                    color             |= (((value + (index * 24))) << 8);  // GREEN
-                    color             |= (((value + (index * 24))) << 16); // BLUE
-                    color             |= (((0xFF))                 << 24); // ALPHA
-                    set_multiply_color (color);
-                }
+					if (index         == (count - 1))
+					{
+						set_multiply_color (color_yellow);
+					}
+					else
+					{
+						////////////////////////////////////////////////////////////////
+						//
+						// calculate white  fade to black: as  we are dealing
+						// with raw binary  data store on the  machine, it is
+						// encoded in the machine's  little endian format, so
+						// the word  representing the RGBA value  is actually
+						// of the form ABGR (note the shifts below)
+						//
+						value          = 0x3F + (8 * index);
+						color          = (((value + (index * 24))));       // RED
+						color         |= (((value + (index * 24))) << 8);  // GREEN
+						color         |= (((value + (index * 24))) << 16); // BLUE
+						color         |= (((0xFF))                 << 24); // ALPHA
+						set_multiply_color (color);
+					}
 
-                if (codemode          == DEBUG_ASM)
-                {
                     hexit_zoomed (0,  y, (int) address, 0.75); // instruction addr
                     hexit_zoomed (88, y, instruction,   0.75); // instruction hex
 
@@ -494,13 +527,11 @@ void main (void)
                     //    "mov   {immediate}, R1"
                     // }
                     //
-                    //immflag            = instruction & 0x02000000;
                     if (immflag       >  0)                         // immediate bit
                     {
                         address        = address + 1;
                         hexit_zoomed (0, (y + 18), (int)address, 0.75); // immediate
 
-//                        immediate      = *(address);                // deref offset
                         hexit_zoomed (88, (y + 18), immediate, 0.75);
                     }
 
@@ -516,38 +547,51 @@ void main (void)
                         y              = y + 18;
                     }
                 }
-                else // DEBUG_C
-                {
-                    /*
-                    for (pos           = 0;
-                         pos          <  opos;
-                         pos           = pos + 1)
-                    {
-                        value          = *address;
-                        if ((int)offset    == value)
-                        {*/
-                            // slen, opos
-                            //if (pos       == 3)
-                            //    asm { "HLT" }
-                    for (pos           = 0;
-                         pos          <  ccount;
-                         pos           = pos + 1)
-                    {
-                    asm { "_XYZ:" }
-                        // a match is found (actual assembly offset maps to actual line of C)
+            }
+
+			else if (codemode         == DEBUG_C)
+			{
+				for (index             = 0;
+					 index            <  ccount;
+					 index             = index + 1)
+				{
+					if (index         == (ccount - 1))
+					{
+						set_multiply_color (color_yellow);
+					}
+					else
+					{
+						////////////////////////////////////////////////////////////////
+						//
+						// calculate white  fade to black: as  we are dealing
+						// with raw binary  data store on the  machine, it is
+						// encoded in the machine's  little endian format, so
+						// the word  representing the RGBA value  is actually
+						// of the form ABGR (note the shifts below)
+						//
+						value          = 0x3F + (8 * index);
+						color          = (((value + (index * 24))));       // RED
+						color         |= (((value + (index * 24))) << 8);  // GREEN
+						color         |= (((value + (index * 24))) << 16); // BLUE
+						color         |= (((0xFF))                 << 24); // ALPHA
+						set_multiply_color (color);
+					}
+
+					/*
                         if ((int) address == chistory[pos])
                         {
                             ctmp           = ccode; // point at first string
                             slen           = *(ctmp-1); // get the string word length
                             cotmp          = coffset + 1;
                             for (iter      = 0;
-                                 iter     <  opos;
+                                 iter     <  num_offsets;
                                  iter      = iter + 1)
                             {
                                 if (*cotmp == (int) address) // found the offset
-                                {
-                                    zprint_zoomed_at (0, y, ctmp, 0.75);
-                                    break;
+                                {*/
+					address            = (int *) clhistory[index];
+					zprint_zoomed_at (0, y, address, 0.75);
+                                   /* break;
                                 }
 
                                 cotmp      = cotmp + 1;   // proceed to next offset
@@ -557,7 +601,7 @@ void main (void)
                             }
                             break;
                         }
-                    }
+                    }*/
 
                     if (index         == (ccount - 1))
                     {
@@ -566,7 +610,7 @@ void main (void)
 
                     y                  = y + 18;
                 }
-            }
+			}
 
             ////////////////////////////////////////////////////////////////////////////
             //
