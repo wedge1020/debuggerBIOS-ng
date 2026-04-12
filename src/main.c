@@ -50,9 +50,9 @@ void main (void)
     int [64] backtrace;
     int      btrace;
     int      btstart;
-    int [8]  chistory;     // previous instructions to display
+    int [16] chistory;     // previous instructions to display
     int      ccount;       // tracking history array content quantity
-    int [8]  clhistory;
+    int [16] clhistory;
     int      iter;
 
     ////////////////////////////////////////////////////////////////////////////////////
@@ -366,10 +366,10 @@ void main (void)
         // C: update the C history array, cycling out the old, bringing in the
         // new as needed
         //
-        if (ccount                    == 8) // buffer the previous 7 instructions,
+        if (ccount                    == 16) // buffer the previous 15 instructions,
         {                                   // cycling off the ones as needed
             for (index                 = 1;
-                 index                <  8;
+                 index                <  16;
                  index                 = index + 1)
             {
                 chistory[index-1]      = chistory[index]; // oldest one goes away
@@ -447,7 +447,6 @@ void main (void)
         //
         while (framestop              != 0) // single step loop
         {
-            stepflag                   = TRUE; // short-circuit pressing of down
             ////////////////////////////////////////////////////////////////////////////
             //
             // draw "debuggerBIOS" logo in top left, with instructions
@@ -551,6 +550,11 @@ void main (void)
 
             else if (codemode         == DEBUG_C)
             {
+				if (ccount            == 0)
+				{
+					stepflag           = TRUE; // short-circuit pressing of down
+				}
+
                 for (index             = 0;
                      index            <  ccount;
                      index             = index + 1)
