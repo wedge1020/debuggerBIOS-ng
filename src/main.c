@@ -52,7 +52,7 @@ void main (void)
     int      btstart;
     int [8]  chistory;     // previous instructions to display
     int      ccount;       // tracking history array content quantity
-	int [8]  clhistory;
+    int [8]  clhistory;
     int      iter;
 
     ////////////////////////////////////////////////////////////////////////////////////
@@ -408,9 +408,9 @@ void main (void)
                 //
                 if (value             == (int) offset)
                 {
-					asm { "_ABC:" }
+                    asm { "_ABC:" }
                     chistory[ccount]   = (int) offset;
-					clhistory[ccount]  = (int) ccode;
+                    clhistory[ccount]  = (int) ctmp;
                     ccount             = ccount + 1;
                     break;
                 }
@@ -427,9 +427,9 @@ void main (void)
                 }
 
                 address                = address + 1;
-				ctmp                   = ctmp + slen; // hop to the next string offset
-				slen                   = *ctmp;       // get the new string word length
-				ctmp                   = ctmp + 1;    // position at start of next string
+                ctmp                   = ctmp + slen; // hop to the next string offset
+                slen                   = *ctmp;       // get the new string word length
+                ctmp                   = ctmp + 1;    // position at start of next string
             }
         }
 
@@ -461,45 +461,45 @@ void main (void)
             // fading-from-white gradient
             //
             y                          = 50;
-			if (codemode              == DEBUG_ASM)
-			{
-				for (index             = 0;
-					 index            <  count;
-					 index             = index + 1)
-				{
-					address            = (int *) history[index];
-					instruction        = *address;
-					immflag            = instruction & 0x02000000;
-					if (immflag       >  0)                         // immediate bit
-					{
-						immediate      = *(address+1);              // deref offset
-					}
-					else
-					{
-						immediate      = 0;                             // no immediate
-					}
+            if (codemode              == DEBUG_ASM)
+            {
+                for (index             = 0;
+                     index            <  count;
+                     index             = index + 1)
+                {
+                    address            = (int *) history[index];
+                    instruction        = *address;
+                    immflag            = instruction & 0x02000000;
+                    if (immflag       >  0)                         // immediate bit
+                    {
+                        immediate      = *(address+1);              // deref offset
+                    }
+                    else
+                    {
+                        immediate      = 0;                             // no immediate
+                    }
 
-					if (index         == (count - 1))
-					{
-						set_multiply_color (color_yellow);
-					}
-					else
-					{
-						////////////////////////////////////////////////////////////////
-						//
-						// calculate white  fade to black: as  we are dealing
-						// with raw binary  data store on the  machine, it is
-						// encoded in the machine's  little endian format, so
-						// the word  representing the RGBA value  is actually
-						// of the form ABGR (note the shifts below)
-						//
-						value          = 0x3F + (8 * index);
-						color          = (((value + (index * 24))));       // RED
-						color         |= (((value + (index * 24))) << 8);  // GREEN
-						color         |= (((value + (index * 24))) << 16); // BLUE
-						color         |= (((0xFF))                 << 24); // ALPHA
-						set_multiply_color (color);
-					}
+                    if (index         == (count - 1))
+                    {
+                        set_multiply_color (color_yellow);
+                    }
+                    else
+                    {
+                        ////////////////////////////////////////////////////////////////
+                        //
+                        // calculate white  fade to black: as  we are dealing
+                        // with raw binary  data store on the  machine, it is
+                        // encoded in the machine's  little endian format, so
+                        // the word  representing the RGBA value  is actually
+                        // of the form ABGR (note the shifts below)
+                        //
+                        value          = 0x3F + (8 * index);
+                        color          = (((value + (index * 24))));       // RED
+                        color         |= (((value + (index * 24))) << 8);  // GREEN
+                        color         |= (((value + (index * 24))) << 16); // BLUE
+                        color         |= (((0xFF))                 << 24); // ALPHA
+                        set_multiply_color (color);
+                    }
 
                     hexit_zoomed (0,  y, (int) address, 0.75); // instruction addr
                     hexit_zoomed (88, y, instruction,   0.75); // instruction hex
@@ -549,35 +549,35 @@ void main (void)
                 }
             }
 
-			else if (codemode         == DEBUG_C)
-			{
-				for (index             = 0;
-					 index            <  ccount;
-					 index             = index + 1)
-				{
-					if (index         == (ccount - 1))
-					{
-						set_multiply_color (color_yellow);
-					}
-					else
-					{
-						////////////////////////////////////////////////////////////////
-						//
-						// calculate white  fade to black: as  we are dealing
-						// with raw binary  data store on the  machine, it is
-						// encoded in the machine's  little endian format, so
-						// the word  representing the RGBA value  is actually
-						// of the form ABGR (note the shifts below)
-						//
-						value          = 0x3F + (8 * index);
-						color          = (((value + (index * 24))));       // RED
-						color         |= (((value + (index * 24))) << 8);  // GREEN
-						color         |= (((value + (index * 24))) << 16); // BLUE
-						color         |= (((0xFF))                 << 24); // ALPHA
-						set_multiply_color (color);
-					}
+            else if (codemode         == DEBUG_C)
+            {
+                for (index             = 0;
+                     index            <  ccount;
+                     index             = index + 1)
+                {
+                    if (index         == (ccount - 1))
+                    {
+                        set_multiply_color (color_yellow);
+                    }
+                    else
+                    {
+                        ////////////////////////////////////////////////////////////////
+                        //
+                        // calculate white  fade to black: as  we are dealing
+                        // with raw binary  data store on the  machine, it is
+                        // encoded in the machine's  little endian format, so
+                        // the word  representing the RGBA value  is actually
+                        // of the form ABGR (note the shifts below)
+                        //
+                        value          = 0x3F + (8 * index);
+                        color          = (((value + (index * 24))));       // RED
+                        color         |= (((value + (index * 24))) << 8);  // GREEN
+                        color         |= (((value + (index * 24))) << 16); // BLUE
+                        color         |= (((0xFF))                 << 24); // ALPHA
+                        set_multiply_color (color);
+                    }
 
-					/*
+                    /*
                         if ((int) address == chistory[pos])
                         {
                             ctmp           = ccode; // point at first string
@@ -589,8 +589,8 @@ void main (void)
                             {
                                 if (*cotmp == (int) address) // found the offset
                                 {*/
-					address            = (int *) clhistory[index];
-					zprint_zoomed_at (0, y, address, 0.75);
+                    address            = (int *) clhistory[index];
+                    zprint_zoomed_at (0, y, address, 0.75);
                                    /* break;
                                 }
 
@@ -610,7 +610,7 @@ void main (void)
 
                     y                  = y + 18;
                 }
-			}
+            }
 
             ////////////////////////////////////////////////////////////////////////////
             //
