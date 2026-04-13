@@ -2,7 +2,8 @@
 //
 // views(): process the individual resource views
 //
-void  views (int  modeflag, int *offset, int  memstart, int  stackgap, int  gamepad, int  cardstart, int *backtrace, int  btstart)
+//void  views (int  modeflag, int *offset, int  memstart, int  stackgap, int  gamepad, int  cardstart, int *backtrace, int  btstart)
+void  views (int  modeflag, int *offset, int *viewflags, int *backtrace)
 {
     ////////////////////////////////////////////////////////////////////////////////////
     //
@@ -15,6 +16,7 @@ void  views (int  modeflag, int *offset, int  memstart, int  stackgap, int  game
     int       index                = 0;
     int       pos                  = 0;
     int       value                = 0;
+    int       viewval              = 0;
 
     ////////////////////////////////////////////////////////////////////////////////////
     //
@@ -25,6 +27,16 @@ void  views (int  modeflag, int *offset, int  memstart, int  stackgap, int  game
          index                     = index + 1)
     {
         data[index]                = 0;         // clear the data array
+    }
+
+    ////////////////////////////////////////////////////////////////////////////////////
+    //
+    // obtain the mode-specific view value
+    //
+    if ((modeflag                 >= MODE_NONE) &&
+        (modeflag                 <  MAX_MODES))
+    {
+        viewval                    = *(viewflags+modeflag);
     }
 
     ////////////////////////////////////////////////////////////////////////////////////
@@ -97,15 +109,15 @@ void  views (int  modeflag, int *offset, int  memstart, int  stackgap, int  game
                  index            >= 0;
                  index             = index - 1)
             {
-                if (-1            == *(backtrace+(btstart+index)))
+                if (-1            == *(backtrace+(viewval+index)))
                 {
                     continue;
                 }
                 print_zoomed_at (464, pos, "[", 0.75);
-                itoa            ((index + btstart), data, 10);
+                itoa            ((index + viewval), data, 10);
                 print_zoomed_at (474, pos, data, 0.75);
                 print_zoomed_at (494, pos, "]:", 0.75);
-                hexit_zoomed    (524, pos, *(backtrace+(btstart+index)), 0.75);
+                hexit_zoomed    (524, pos, *(backtrace+(viewval+index)), 0.75);
                 pos                = pos + 20;
             }
             break;
@@ -129,14 +141,14 @@ void  views (int  modeflag, int *offset, int  memstart, int  stackgap, int  game
                 //
                 // display address
                 //
-                hexit_zoomed    (464, (20+(index * 20)), (memstart+index), 0.75);
+                hexit_zoomed    (464, (20+(index * 20)), (viewval+index), 0.75);
                 print_zoomed_at (544, (20+(index * 20)), ":", 0.75); 
 
                 ////////////////////////////////////////////////////////////////////////
                 //
                 // display value at address
                 //
-                address            = (int *) (memstart+index);
+                address            = (int *) (value+index);
                 hexit_zoomed (560, (20+(index * 20)), *(address), 0.75);
             }
             break;
@@ -164,7 +176,7 @@ void  views (int  modeflag, int *offset, int  memstart, int  stackgap, int  game
                 "MOV  {address}, R0"
                 "POP  R0"
             }
-            hexit_zoomed (560, 20, (int) (address), 0.75);
+            hexit_zoomed (560, 20, (int) address, 0.75);
 
             ////////////////////////////////////////////////////////////////////////////
             //
@@ -180,7 +192,7 @@ void  views (int  modeflag, int *offset, int  memstart, int  stackgap, int  game
 
             pos                    = 20;
             for (index             = 0;
-                 index            <= stackgap;
+                 index            <= viewval;
                  index             = index + 1)
             {
                 if ((0            <= (int) (address+index)) &&
@@ -207,10 +219,10 @@ void  views (int  modeflag, int *offset, int  memstart, int  stackgap, int  game
 
             pos                    = pos + 16;
             print_at     (464, pos, "BP:"); 
-            hexit_zoomed (560, pos, (int) (stack), 0.75);
+            hexit_zoomed (560, pos, (int) stack, 0.75);
 
             for (index             = 0;
-                 index            <  18 - stackgap;
+                 index            <  18 - viewval;
                  index             = index + 1)
             {
                 if ((0            <= (int) (stack+index)) &&
@@ -229,6 +241,87 @@ void  views (int  modeflag, int *offset, int  memstart, int  stackgap, int  game
                     break;
                 }
             }
+            break;
+
+        ////////////////////////////////////////////////////////////////////////////////
+        //
+        // MODE_TIMPORTS: if selected, TIM ports and their values will be
+        // displayed
+        //
+        case MODE_TIMPORTS:
+
+            print_zoomed_at (464, 0, "TIM port value", 1.0);
+            select_region   (region_divider_h);
+            draw_region_at  (464, 20);
+            draw_region_at  (560, 20);
+
+            print_at (464, 20, "Date:");
+            asm
+            {
+                "PUSH R0"
+                "IN   R0,      TIM_CurrentDate"
+                "MOV  {value}, R0"
+                "POP  R0"
+            }
+            itoa (value, data, 16);
+            print_at (560, 20, data);
+
+            print_at (464, 40, "Time:");
+            asm
+            {
+                "PUSH R0"
+                "IN   R0,      TIM_CurrentTime"
+                "MOV  {value}, R0"
+                "POP  R0"
+            }
+            itoa (value, data, 16);
+            print_at (560, 40, data);
+
+            print_at (464, 60, "Frame #:");
+            asm
+            {
+                "PUSH R0"
+                "IN   R0,      TIM_FrameCounter"
+                "MOV  {value}, R0"
+                "POP  R0"
+            }
+            itoa (value, data, 10);
+            print_at (560, 60, data);
+
+            print_at (464, 80, "Cycles:");
+            asm
+            {
+                "PUSH R0"
+                "IN   R0,      TIM_CycleCounter"
+                "MOV  {value}, R0"
+                "POP  R0"
+            }
+            itoa (value, data, 10);
+            print_at (560, 80, data);
+            break;
+
+        ////////////////////////////////////////////////////////////////////////////////
+        //
+        // MODE_RNGPORTS: if selected, RNG port and its value will be
+        // displayed
+        //
+        case MODE_RNGPORTS:
+
+            print_zoomed_at (464, 0, "RNG port value", 1.0);
+            select_region   (region_divider_h);
+            draw_region_at  (464, 20);
+            draw_region_at  (560, 20);
+
+            print_at (464, 20, "RAND:");
+            asm
+            {
+                "PUSH R0"
+                "MOV  R0,      [0x003FFFE2]"
+                "MOV  {value}, R0"
+                "POP  R0"
+            }
+            itoa (value, data, 10);
+            print_at (560, 20, data);
             break;
 
         ////////////////////////////////////////////////////////////////////////////////
@@ -624,8 +717,8 @@ void  views (int  modeflag, int *offset, int  memstart, int  stackgap, int  game
             draw_region_at  (560, 20);
 
             print_at (464, 20, "Gamepad:");
-            select_gamepad (gamepad);
-            itoa (gamepad, data, 10);
+            select_gamepad (viewval);
+            itoa (viewval, data, 10);
             print_at (560, 20, data);
 
             print_zoomed_at (464, 40, "Connected:", 0.75);
@@ -869,14 +962,14 @@ void  views (int  modeflag, int *offset, int  memstart, int  stackgap, int  game
                     //
                     // display address
                     //
-                    hexit_zoomed    (464, (40+(index * 20)), (cardstart+index), 0.75);
+                    hexit_zoomed    (464, (40+(index * 20)), (viewval+index), 0.75);
                     print_zoomed_at (544, (40+(index * 20)), ":", 0.75); 
 
                     ////////////////////////////////////////////////////////////////////
                     //
                     // display value at address
                     //
-                    address            = (int *) (cardstart+index);
+                    address            = (int *) (viewval+index);
                     hexit_zoomed (560, (40+(index * 20)), *(address), 0.75);
                 }
             }

@@ -54,6 +54,7 @@ void main (void)
     int      ccount;       // tracking history array content quantity
     int [16] clhistory;
     int      cstepflag;
+    int [MAX_MODES] viewflags;
 
     ////////////////////////////////////////////////////////////////////////////////////
     //
@@ -87,9 +88,11 @@ void main (void)
     // 0x003FFBB0 top of debugger stack (1023 total words)
     //   . . .
     // 0x003FFFAF base of debugger/BIOS stack
-    // 0x003FFFB0 start of dynamic subroutine (50 total words)
+    // 0x003FFFB0 start of dynamic subroutine (48 total words)
     //   . . .
-    // 0x003FFFE2 end of dynamic subroutine
+    // 0x003FFFE0 end of dynamic subroutine
+    // 0x003FFFE1 CART RNG_CurrentValue value
+    // 0x003FFFE2 CART GPUCommand value
     // 0x003FFFE3 CART GPU_ClearColor value
     // 0x003FFFE4 CART GPU_MultiplyColor value
     // 0x003FFFE5 CART GPU_ActiveBlending value
@@ -300,7 +303,13 @@ void main (void)
         if ((continueflag             == CONTINUE_ENABLED) &&
             (clearflag                == TRUE))
         {
-            views (modeflag, offset, memstart, stackgap, gamepad, cardstart, backtrace, btstart);
+            //views (modeflag, offset, memstart, stackgap, gamepad, cardstart, backtrace, btstart);
+            viewflags[MODE_MEMORY]     = memstart;
+            viewflags[MODE_STACK]      = stackgap;
+            viewflags[MODE_INPPORTS]   = gamepad;
+            viewflags[MODE_MEMPORTS]   = cardstart;
+            viewflags[MODE_BACKTRACE]  = btstart;
+            views (modeflag, offset, viewflags, backtrace);
             clearflag                  = FALSE;
         }
 
@@ -606,7 +615,13 @@ void main (void)
             //
             // resource view logic
             //
-            views (modeflag, offset, memstart, stackgap, gamepad, cardstart, backtrace, btstart);
+            //views (modeflag, offset, memstart, stackgap, gamepad, cardstart, backtrace, btstart);
+            viewflags[MODE_MEMORY]     = memstart;
+            viewflags[MODE_STACK]      = stackgap;
+            viewflags[MODE_INPPORTS]   = gamepad;
+            viewflags[MODE_MEMPORTS]   = cardstart;
+            viewflags[MODE_BACKTRACE]  = btstart;
+            views (modeflag, offset, viewflags, backtrace);
 
             ////////////////////////////////////////////////////////////////////////////
             //
@@ -701,6 +716,17 @@ void main (void)
                         cardstart      = 0x3003FFF0;
                     }
                 }
+                else if (modeflag     == MODE_RNGPORTS)
+                {
+                    asm
+                    {
+                        "PUSH  R0"
+                        "MOV   R0,           [0x003FFFE1]"
+                        "ISUB  R0,           1"
+                        "MOV   [0x003FFFE1], R0"
+                        "POP   R0"
+                    }
+                }
             }
 
             ////////////////////////////////////////////////////////////////////////////
@@ -752,6 +778,17 @@ void main (void)
                     if (cardstart     <  0x30000000)
                     {
                         cardstart      = 0x3003FF00;
+                    }
+                }
+                else if (modeflag     == MODE_RNGPORTS)
+                {
+                    asm
+                    {
+                        "PUSH  R0"
+                        "MOV   R0,           [0x003FFFE1]"
+                        "ISUB  R0,           100"
+                        "MOV   [0x003FFFE1], R0"
+                        "POP   R0"
                     }
                 }
             }
@@ -811,6 +848,17 @@ void main (void)
                         cardstart      = 0x30000000;
                     }
                 }
+                else if (modeflag     == MODE_RNGPORTS)
+                {
+                    asm
+                    {
+                        "PUSH  R0"
+                        "MOV   R0,           [0x003FFFE1]"
+                        "IADD  R0,           1"
+                        "MOV   [0x003FFFE1], R0"
+                        "POP   R0"
+                    }
+                }
             }
 
             ////////////////////////////////////////////////////////////////////////////
@@ -862,6 +910,17 @@ void main (void)
                     if (cardstart     >  0x3003FF00)
                     {
                         cardstart      = 0x30000000;
+                    }
+                }
+                else if (modeflag     == MODE_RNGPORTS)
+                {
+                    asm
+                    {
+                        "PUSH  R0"
+                        "MOV   R0,           [0x003FFFE1]"
+                        "IADD  R0,           100"
+                        "MOV   [0x003FFFE1], R0"
+                        "POP   R0"
                     }
                 }
             }
@@ -1194,6 +1253,37 @@ void main (void)
 
             ////////////////////////////////////////////////////////////////////////////
             //
+            // IN: be on  the lookout for RNG port reads in the CART, and
+            // provide it our in-memory value instead; then refresh whats
+            // in memory
+            //
+            case OPCODE_IN:
+                ////////////////////////////////////////////////////////////////////////
+                //
+                // If getting a random number, emulate the IN instruction
+                // as we want to be able to exert control over it via the
+                // debugger (note that if RNG, it completely handles this
+                // instruction; if not, it lets it process)
+                //
+                if (port              == 0x100)    // RNG_CurrentValue
+                {
+                    address            = (int *) (ADDR_CART_REGISTERS + dstreg);
+                    asm
+                    {
+                        "PUSH  R0"
+                        "MOV   R0,           [0x003FFFE1]"
+                        "MOV   {value},      R0"
+                        "IN    R0,           RNG_CurrentValue"
+                        "MOV   [0x003FFFE1], R0"
+                        "POP   R0"
+                    }
+                    *address           = value;
+                    continue;
+                }
+                break;
+
+            ////////////////////////////////////////////////////////////////////////////
+            //
             // OUT: be on  the lookout for clear  screen instances, which
             // will be  tied to  `clearflag` and  the continue  mode view
             // rendering.
@@ -1256,9 +1346,9 @@ void main (void)
         //
         // For reference:
         //
-        //   0x003FFFB0 start of dynamic subroutine (50 total words)
+        //   0x003FFFB0 start of dynamic subroutine (48 total words)
         //     . . .
-        //   0x003FFFE2 end of dynamic subroutine
+        //   0x003FFFE0 end of dynamic subroutine
         //
         // The idea is to pack  the instructions into a specific location
         // in memory (RAM), in known  consecutive locations, then to CALL

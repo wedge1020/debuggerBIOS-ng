@@ -155,12 +155,14 @@ struct error_message
 #define  MODE_MEMORY     2
 #define  MODE_STACK      3
 #define  MODE_BACKTRACE  4
-#define  MODE_GPUPORTS   5
-#define  MODE_SPUPORTS   6
-#define  MODE_INPPORTS   7
-#define  MODE_CARPORTS   8
-#define  MODE_MEMPORTS   9
-#define  MAX_MODES       10
+#define  MODE_TIMPORTS   5
+#define  MODE_RNGPORTS   6
+#define  MODE_GPUPORTS   7
+#define  MODE_SPUPORTS   8
+#define  MODE_INPPORTS   9
+#define  MODE_CARPORTS   10
+#define  MODE_MEMPORTS   11
+#define  MAX_MODES       12
 
 ////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -257,7 +259,8 @@ void  print_hex_value     (int  x,     int  y,    int *name,        int    value
 void  print_zoomed_at     (int  x,     int  y,    int *text,        float  factor);
 void  zprint_zoomed_at    (int  x,     int  y,    int *text,        float  factor);
 void  init_regions        (void);
-void  views               (int  mode,  int *addr, int  mem,         int  stack,       int    gamepad,  int  card, int *bt, int btstart);
+//void  views               (int  mode,  int *addr, int  mem,         int    stack,       int    gamepad,  int  card, int *bt, int btstart);
+void  views               (int  mode,  int *addr, int *flags,       int   *backtrace);
 bool  cartridge_connected ();
 void  draw_logo           (int  mode,  int *coffset);
 void  request_cartridge   ();
