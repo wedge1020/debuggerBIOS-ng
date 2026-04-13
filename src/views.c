@@ -85,12 +85,14 @@ void  views (int  modeflag, int *offset, int *viewflags, int *backtrace)
 
                     case FORMAT_INTEGER:
                         itoa (*(address+index), data, 10);
-                        print_zoomed_at (540, 18 + (index * 18), (address+index), 0.75);
+                        //print_zoomed_at (540, 18 + (index * 18), data, 0.75);
+                        print_at (540, 18 + (index * 18), data);
                         break;
 
                     case FORMAT_FLOAT:
-                        ftoa (*(address+index), data);
-                        print_zoomed_at (540, 18 + (index * 18), (address+index), 0.75);
+                        ftoa ((float)*(address+index), data);
+                        //print_zoomed_at (540, 18 + (index * 18), data, 0.75);
+                        print_at (540, 18 + (index * 18), data);
                         break;
                 }
             }
