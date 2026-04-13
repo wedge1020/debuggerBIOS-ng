@@ -43,33 +43,6 @@ merely studying the operation of the system.
 
 Available and planned functionality includes:
 
-| FEATURE                                                   | STATUS |
-| --------------------------------------------------------- | ------ |
-| machine language decoding into assembly                   |   [x]  |
-| display of offset and assembly code                       |   [x]  |
-| single-stepping through assemble (via `DOWN`)             |   [x]  |
-| continue mode (via `START`)                               |   [ ]  |
-| escape mode (via `X`) to leave debugger                   |   [ ]  |
-| C debugging mode (with prepared CART)                     |   [x]  |
-| debugging mode toggle (via `Y`)                           |   [x]  |
-| resource views (via `UP`)                                 |   [x]  |
-| adjustment of view data (`LEFT`/`RIGHT`) by 16            |   [x]  |
-| adjustment of view data (`L`/`R`) by 256                  |   [x]  |
-| view: CART registers (including `IP`/`IR`/`IV` registers) |   [x]  |
-| view: RAM                                                 |   [x]  |
-| view: current stack (based on CART `BP` and `SP`)         |   [x]  |
-| view: subroutine backtrace (machine code offsets)         |   [x]  |
-| view: C function backtrace                                |   [ ]  |
-| view: TIM ports                                           |   [ ]  |
-| view: RNG port                                            |   [ ]  |
-| view: alteration of next RNG value to be given to CART    |   [ ]  |
-| view: GPU ports                                           |   [x]  |
-| view: SND ports                                           |   [x]  |
-| view: INP ports                                           |   [x]  |
-| view: CAR ports                                           |   [x]  |
-| view: MEM port (and memory card contents)                 |   [x]  |
-| emulation: all branch mode instructions                   |   [x]  |
-
   * display of offset and assembly code
   * display of line number and C code, if debugging information present
   * single-stepping through assembly code (via `DOWN`)
