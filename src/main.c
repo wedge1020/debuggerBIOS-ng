@@ -184,21 +184,40 @@ void main (void)
     {
         "PUSH  R9"
         "PUSH  R10"
-        "IN    R9,        CAR_ProgramROMSize"
-        "IADD  R9,        0x20000000"
-        "ISUB  R9,        1"
+        "IN    R9,        CAR_ProgramROMSize" // obtain ROM size
+        "IADD  R9,        0x20000000"         // add CART page base
+        "ISUB  R9,        1"                  // -1 to get offset
+        "MOV   {coffset}, R9"
+    }
+    /*
         "MOV   R10,       [R9]"
         "ISUB  R9,        R10"
         "IADD  R9,        1"
-        //"MOV   R10,       [R9]"
         "MOV   {coffset}, R9"
         "POP   R10"
         "POP   R9"
+    }*/
+
+    //////////////////////////////////////////////////////////////////////////
+    //
+    // instead of manipulating coffset above in the inline assembly,
+    // we do it here, after doing a bounds check, to hopefully avoid
+    // a memory read error that has occurred when using a CART which
+    // has no debugging data injected
+    //
+    if (((int) coffset                >= 0x20000000) &&
+        ((int) coffset                <= 0x27FFFFFF))
+    {
+        coffset                        = (coffset - *coffset) + 1;
     }
 
-    codemode                           = DEBUG_ASM;
-    if (((int)coffset                 >= 0x20000000) &&
-        ((int)coffset                 <= 0x27FFFFFF))
+    ////////////////////////////////////////////////////////////////////////////////////
+    //
+    // Look for the embedded "TEXT" string at the expected location; if present,
+    // we have C debug data, and will switch to C debugging mode
+    //
+    if (((int) coffset                >= 0x20000000) &&
+        ((int) coffset                <= 0x27FFFFFF))
     {
         if (*coffset                  == 0x54584554) // if "TEXT" is here
         {
@@ -209,8 +228,14 @@ void main (void)
             cstepflag                  = TRUE;
         }
     }
+
+    ////////////////////////////////////////////////////////////////////////////////////
+    //
+    // Check for V32-TEXT failed: assume unblessed CART, revert to ASM debug mode
+    //
     else
     {
+        codemode                       = DEBUG_ASM;
         coffset                        = NULL;
         ccode                          = NULL;
         cstepflag                      = FALSE;
@@ -303,7 +328,6 @@ void main (void)
         if ((continueflag             == CONTINUE_ENABLED) &&
             (clearflag                == TRUE))
         {
-            //views (modeflag, offset, memstart, stackgap, gamepad, cardstart, backtrace, btstart);
             viewflags[MODE_MEMORY]     = memstart;
             viewflags[MODE_STACK]      = stackgap;
             viewflags[MODE_INPPORTS]   = gamepad;
@@ -590,7 +614,7 @@ void main (void)
                         // the word  representing the RGBA value  is actually
                         // of the form ABGR (note the shifts below)
                         //
-                        value          = 0x3F + (16 * index);
+                        value          = 0x1F + (16 * index);
                         color          = (((value + (index * 24))));       // RED
                         color         |= (((value + (index * 24))) << 8);  // GREEN
                         color         |= (((value + (index * 24))) << 16); // BLUE
@@ -615,7 +639,6 @@ void main (void)
             //
             // resource view logic
             //
-            //views (modeflag, offset, memstart, stackgap, gamepad, cardstart, backtrace, btstart);
             viewflags[MODE_MEMORY]     = memstart;
             viewflags[MODE_STACK]      = stackgap;
             viewflags[MODE_INPPORTS]   = gamepad;
@@ -631,8 +654,11 @@ void main (void)
             if ((value                >= BUTTON_IS_PRESSED) &&
                 (yflag                == FALSE))
             {
-                codemode               = (codemode + 1) % 2;
-                yflag                  = TRUE;
+                if (coffset           != NULL)
+                {
+                    codemode           = (codemode + 1) % 2;
+                    yflag              = TRUE;
+                }
             }
 
             ////////////////////////////////////////////////////////////////////////////
