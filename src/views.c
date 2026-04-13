@@ -316,7 +316,7 @@ void  views (int  modeflag, int *offset, int *viewflags, int *backtrace)
             asm
             {
                 "PUSH R0"
-                "MOV  R0,      [0x003FFFE2]"
+                "MOV  R0,      [0x003FFFE1]"
                 "MOV  {value}, R0"
                 "POP  R0"
             }

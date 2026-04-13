@@ -56,6 +56,13 @@ for entry in `cat ${VBINDIR}/1`; do
     asmfile=$(echo "${entry}" | cut -d':' -f2)
     cline=$(echo   "${entry}" | cut -d':' -f3)
     cfile=$(echo   "${entry}" | cut -d':' -f4)
+    cmax=$(cat     ${cfile}   | wc -l)
+    spaces=1
+    place=1
+    while [ "${place}" -le "${cmax}" ]; do
+        let place=place*10
+           let spaces=space+1
+    done
 
     chk=$(cat ${asmfile} | head -${asmline} | tail -1 | grep '^ *_[^:]*:$' | wc -l)
 
@@ -68,6 +75,12 @@ for entry in `cat ${VBINDIR}/1`; do
     ochk=$(echo "${offset}" | egrep -qio '\<0x[0-9A-F]{8}\>' && echo "true" || echo "false")
     if [ ! -z "${offset}" ] && [ "${ochk}" = "true" ]; then
         cdata=$(cat ${cfile} | head -${cline} | tail -1 | tr '\t' ' ' | tr -s ' ' | sed 's/^ *//g' | sed 's://.*$::g' | sed 's/ *$//g')
+        ######################################################################
+        ##
+        ## reformat cdata to include line number, formatted to the largest
+        ## width of line number
+        ##
+        cdata=$(printf "%*s: %s" "${spaces}" "${cline}" "${cdata}")
         b64data=$(echo -n "${cdata}" | base64 -w 0)
         if [ ! -z "${b64data}" ]; then
             echo "${offset}:${entry}:${b64data}" >> ${VBINDIR}/${NAME}.out
@@ -98,11 +111,11 @@ VBINSIZE=$(echo "${VBINSIZE}/4"          | bc -q)
 ./bincode -e -o ${num_offsets}            >> ${VBINDIR}/${VBINFILE} 2> /dev/null
 
 for offset in `cat ${VBINDIR}/${NAME}.out | cut -d':' -f1`; do
-	./bincode -e -o ${offset}             >> ${VBINDIR}/${VBINFILE} 2> /dev/null
+    ./bincode -e -o ${offset}             >> ${VBINDIR}/${VBINFILE} 2> /dev/null
 done
 
 for base64data in `cat ${VBINDIR}/${NAME}.out | cut -d':' -f6`; do
-	./bincode -e -s ${base64data}         >> ${VBINDIR}/${VBINFILE} 2> /dev/null
+    ./bincode -e -s ${base64data}         >> ${VBINDIR}/${VBINFILE} 2> /dev/null
 done
 
 NEWVBINSIZE=$(stat ${VBINDIR}/${VBINFILE} | grep 'Size:' | sed 's/^.*Size: \([0-9][0-9]*\).*$/\1/g')
