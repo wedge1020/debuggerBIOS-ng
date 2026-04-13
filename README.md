@@ -77,32 +77,52 @@ Current project status:
   - [ ] exit mode
   - [x] resource views
     - [x] CART registers
+      - [x] general registers
+      - [x] system registers (`IP`, `IR`, and `IV`)
+      - [x] general register format adjustment (HEX, INTEGER, FLOAT)
     - [x] RAM
     - [x] stack
     - [x] backtrace
-    - [ ] TIM ports
-    - [ ] RNG port
+      - [x] offset listing
+      - [ ] C function listing
+    - [x] TIM ports
+    - [x] RNG port
+      - [x] stored, manipulable value passed to CART
     - [x] GPU ports
     - [x] SPU ports
     - [x] INP ports
+      - [x] switch between different gamepads
     - [x] CAR ports
     - [x] MEM port and MEMCARD 
   - [x] emulated branch instructions
+    - [x] `JMP`
+    - [x] `CALL`- including emulated stack and backtrace integration
+    - [x] `RET`- including emulated stack and backtrace integration
+    - [x] `JT`
+    - [x] `JF`
+  - [x] conditional emulation of other instructions
+    - [x] `IN` for `RNG_CurrentValue`- debugging overrides for value
+    - [ ] `OUT` for various `GPUCommand` writes
   - [x] assembly debugging mode
+    - [x] memory offsets
+    - [x] raw hex and decoded assembly
+    - [x] immediate value data displayed if present
+    - [x] up to the past 8 instructions displayed (current plus history)
   - [x] C debugging mode (with CART preparation)
+    - [x] line numbers included
+    - [ ] function scope identified
+    - [ ] clean single step
+    - [x] up to the past 16 instructions displayed (current, history)
 
 TODO (in no particular order):
 
-  * RNG port view, allow manipulation of next RNG value to CART
   * check connected MEMCART for name / length
   * C function names in backtrace
   * fix for C history color gradients 
   * figure out display issues with continue mode
   * figure out display issues with exit mode
-  * pack passed flags into an array to simplify the call to `view()`
   * rudimentary break points
   * only display C code for main .c file / not header files
-  * line numbers in displayed C code
 
 ## SCREENSHOTS
 

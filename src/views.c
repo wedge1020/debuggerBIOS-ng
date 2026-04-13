@@ -34,7 +34,7 @@ void  views (int  modeflag, int *offset, int *viewflags, int *backtrace)
     // obtain the mode-specific view value
     //
     if ((modeflag                 >= MODE_NONE) &&
-        (modeflag                 <  MAX_MODES))
+        (modeflag                 <  NUM_MODES))
     {
         viewval                    = *(viewflags+modeflag);
     }
@@ -50,7 +50,7 @@ void  views (int  modeflag, int *offset, int *viewflags, int *backtrace)
         // register display: if enabled, the
         // CART register values will be displayed off to the right
         //
-        case MODE_REGISTER:
+        case MODE_REG:
             print_zoomed_at (490, 0, "register view", 1.0);
             select_region   (region_divider_h);
             draw_region_at  (490, 20);
@@ -77,7 +77,22 @@ void  views (int  modeflag, int *offset, int *viewflags, int *backtrace)
                 // display CART register value (backed up in memory)
                 //
                 address            = (int *) ADDR_CART_REGISTERS;
-                hexit_zoomed (540, 18 + (index * 18), *(address+index), 0.75);
+                switch (viewval)
+                {
+                    case FORMAT_HEX:
+                        hexit_zoomed (540, 18 + (index * 18), *(address+index), 0.75);
+                        break;
+
+                    case FORMAT_INTEGER:
+                        itoa (*(address+index), data, 10);
+                        print_zoomed_at (540, 18 + (index * 18), (address+index), 0.75);
+                        break;
+
+                    case FORMAT_FLOAT:
+                        ftoa (*(address+index), data);
+                        print_zoomed_at (540, 18 + (index * 18), (address+index), 0.75);
+                        break;
+                }
             }
 
             print_at (490, 18 + (index * 18), "IP:");
@@ -98,7 +113,7 @@ void  views (int  modeflag, int *offset, int *viewflags, int *backtrace)
         // backtrace view: if selected, and the backtrace array populated,
         // display the current function call stack
         //
-        case MODE_BACKTRACE:
+        case MODE_BTR:
             print_zoomed_at (464, 0, "backtrace", 1.0);
             select_region   (region_divider_h);
             draw_region_at  (464, 20);
@@ -127,7 +142,7 @@ void  views (int  modeflag, int *offset, int *viewflags, int *backtrace)
         // memory display: if selected, the CART memory values will be
         // displayed off to the right
         //
-        case MODE_MEMORY:
+        case MODE_RAM:
             print_zoomed_at (464, 0, "memaddr   value", 1.0);
             select_region   (region_divider_h);
             draw_region_at  (464, 20);
@@ -155,10 +170,10 @@ void  views (int  modeflag, int *offset, int *viewflags, int *backtrace)
 
         ////////////////////////////////////////////////////////////////////////////////
         //
-        // MODE_STACK: if selected, the stack registers and memory that
+        // MODE_STA: if selected, the stack registers and memory that
         // immediate surrounds the stack will be displayed
         //
-        case MODE_STACK:
+        case MODE_STA:
             print_zoomed_at (464, 0, "stack     value", 1.0);
             select_region   (region_divider_h);
             draw_region_at  (464, 20);
@@ -248,7 +263,7 @@ void  views (int  modeflag, int *offset, int *viewflags, int *backtrace)
         // MODE_TIMPORTS: if selected, TIM ports and their values will be
         // displayed
         //
-        case MODE_TIMPORTS:
+        case MODE_TIM:
 
             print_zoomed_at (464, 0, "TIM port value", 1.0);
             select_region   (region_divider_h);
@@ -305,7 +320,7 @@ void  views (int  modeflag, int *offset, int *viewflags, int *backtrace)
         // MODE_RNGPORTS: if selected, RNG port and its value will be
         // displayed
         //
-        case MODE_RNGPORTS:
+        case MODE_RNG:
 
             print_zoomed_at (464, 0, "RNG port value", 1.0);
             select_region   (region_divider_h);
@@ -326,10 +341,10 @@ void  views (int  modeflag, int *offset, int *viewflags, int *backtrace)
 
         ////////////////////////////////////////////////////////////////////////////////
         //
-        // MODE_GPUPORTS: if selected, GPU ports and their values will be
+        // MODE_GPU: if selected, GPU ports and their values will be
         // displayed
         //
-        case MODE_GPUPORTS:
+        case MODE_GPU:
 
             print_zoomed_at (464, 0, "GPU port value", 1.0);
             select_region   (region_divider_h);
@@ -528,10 +543,10 @@ void  views (int  modeflag, int *offset, int *viewflags, int *backtrace)
 
         ////////////////////////////////////////////////////////////////////////////////
         //
-        // MODE_SPUPORTS: if selected, SPU ports and their values will be
+        // MODE_SPU: if selected, SPU ports and their values will be
         // displayed
         //
-        case MODE_SPUPORTS:
+        case MODE_SPU:
             print_zoomed_at (464, 0, "SPU port value", 1.0);
             select_region   (region_divider_h);
             draw_region_at  (464, 20);
@@ -707,10 +722,10 @@ void  views (int  modeflag, int *offset, int *viewflags, int *backtrace)
 
         ////////////////////////////////////////////////////////////////////////////////
         //
-        // MODE_INPPORTS: if selected, INP ports and their values will be
+        // MODE_INP: if selected, INP ports and their values will be
         // displayed
         //
-        case MODE_INPPORTS:
+        case MODE_INP:
             print_zoomed_at (464, 0, "INP port value", 1.0);
             select_region   (region_divider_h);
             draw_region_at  (464, 20);
@@ -865,10 +880,10 @@ void  views (int  modeflag, int *offset, int *viewflags, int *backtrace)
 
         ////////////////////////////////////////////////////////////////////////////////
         //
-        // MODE_CARPORTS: if selected, CAR ports and their values will be
+        // MODE_CAR: if selected, CAR ports and their values will be
         // displayed
         //
-        case MODE_CARPORTS:
+        case MODE_CAR:
             print_zoomed_at (464, 0, "CAR port value", 1.0);
             select_region   (region_divider_h);
             draw_region_at  (464, 20);
@@ -927,10 +942,10 @@ void  views (int  modeflag, int *offset, int *viewflags, int *backtrace)
 
         ////////////////////////////////////////////////////////////////////////////////
         //
-        // MODE_MEMPORTS: if selected, the MEM port and connected MEMCard data
+        // MODE_MEM: if selected, the MEM port and connected MEMCard data
         // will be displayed, with similar memory-adjustment controls available
         //
-        case MODE_MEMPORTS:
+        case MODE_MEM:
             print_zoomed_at (464, 0, "MEM port value", 1.0);
             select_region   (region_divider_h);
             draw_region_at  (464, 20);

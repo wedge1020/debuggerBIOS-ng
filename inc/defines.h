@@ -150,19 +150,28 @@ struct error_message
 //
 // Pre-processor: debugger view modes
 //
-#define  MODE_NONE       0
-#define  MODE_REGISTER   1
-#define  MODE_MEMORY     2
-#define  MODE_STACK      3
-#define  MODE_BACKTRACE  4
-#define  MODE_TIMPORTS   5
-#define  MODE_RNGPORTS   6
-#define  MODE_GPUPORTS   7
-#define  MODE_SPUPORTS   8
-#define  MODE_INPPORTS   9
-#define  MODE_CARPORTS   10
-#define  MODE_MEMPORTS   11
-#define  MAX_MODES       12
+#define  MODE_NONE          0
+#define  MODE_REG           1
+#define  MODE_RAM           2
+#define  MODE_STA           3
+#define  MODE_BTR           4
+#define  MODE_TIM           5
+#define  MODE_RNG           6
+#define  MODE_GPU           7
+#define  MODE_SPU           8
+#define  MODE_INP           9
+#define  MODE_CAR           10
+#define  MODE_MEM           11
+#define  NUM_MODES          12
+
+////////////////////////////////////////////////////////////////////////////////////////
+//
+// Pre-processor: data formats
+//
+#define  FORMAT_HEX      0
+#define  FORMAT_INTEGER  1
+#define  FORMAT_FLOAT    2
+#define  NUM_FORMATS     3
 
 ////////////////////////////////////////////////////////////////////////////////////////
 //

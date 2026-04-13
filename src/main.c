@@ -38,10 +38,6 @@ void main (void)
     int      decflag;
     int      clearflag;
     int      waitflag;
-    int      memstart;
-    int      stackgap;
-    int      gamepad;
-    int      cardstart;
     int      color;
     int      srcreg;
     int      dstreg;
@@ -49,12 +45,11 @@ void main (void)
     int    **mem;
     int [64] backtrace;
     int      btrace;
-    int      btstart;
     int [16] chistory;     // previous instructions to display
     int      ccount;       // tracking history array content quantity
     int [16] clhistory;
     int      cstepflag;
-    int [MAX_MODES] viewflags;
+    int [NUM_MODES] vflag;
 
     ////////////////////////////////////////////////////////////////////////////////////
     //
@@ -263,31 +258,32 @@ void main (void)
     //     "mov   {offset}, R0"
     // }
     //
-    offset                             = (int *) 0x20000000; // first CART word
+    offset                               = (int *) 0x20000000; // first CART word
 
     ////////////////////////////////////////////////////////////////////////////////////
     //
     // debugging  loop.  This  is  an   infinite  while  loop  that  will
     // continually take us from instruction to instruction.
     //
-    count                              = 0;
-    ccount                             = 0;
-    modeflag                           = MODE_NONE; // no content view by default
-    memstart                           = 0x003FFFF0;
-    cardstart                          = 0x30000000;
-    stackgap                           = 9;
-    exitflag                           = FALSE;
-    continueflag                       = CONTINUE_NONE;
-    clearflag                          = FALSE;
-    waitflag                           = FALSE;
-    for (index                         = 0;
-         index                        <  64;
-         index                         = index + 1)
+    count                                = 0;
+    ccount                               = 0;
+    modeflag                             = MODE_NONE; // no content view by default
+    vflag[MODE_RAM]                      = 0x003FFFF0;
+    vflag[MODE_REG]                      = FORMAT_HEX;
+    vflag[MODE_STA]                      = 9;
+    vflag[MODE_MEM]                      = 0x30000000;
+    exitflag                             = FALSE;
+    continueflag                         = CONTINUE_NONE;
+    clearflag                            = FALSE;
+    waitflag                             = FALSE;
+    for (index                           = 0;
+         index                          <  64;
+         index                           = index + 1)
     {
-        backtrace[index]               = -1;
+        backtrace[index]                 = -1;
     }
-    btrace                             = 0;
-    btstart                            = 0;
+    btrace                               = 0;
+    vflag[MODE_BTR]                      = 0;
     while (1)
     {
         ////////////////////////////////////////////////////////////////////////////////
@@ -310,13 +306,13 @@ void main (void)
         //     "pop   R0"
         // }
         //
-        instruction                    = *offset;
-        immflag                        = instruction & 0x02000000;
-        code                           = (int *) ADDR_CART_OFFSET;
-        *code                          = (int) offset + 1;
-        if (immflag                   >  0)
+        instruction                      = *offset;
+        immflag                          = instruction & 0x02000000;
+        code                             = (int *) ADDR_CART_OFFSET;
+        *code                            = (int) offset + 1;
+        if (immflag                     >  0)
         {
-            *code                      = (int) offset + 2;
+            *code                        = (int) offset + 2;
         }
 
         ////////////////////////////////////////////////////////////////////////////////
@@ -325,16 +321,11 @@ void main (void)
         // issued  a  clearing  of  the  screen  (via  `out  GPU_Command,
         // GPUCommand_ClearScreen`)
         //
-        if ((continueflag             == CONTINUE_ENABLED) &&
-            (clearflag                == TRUE))
+        if ((continueflag               == CONTINUE_ENABLED) &&
+            (clearflag                  == TRUE))
         {
-            viewflags[MODE_MEMORY]     = memstart;
-            viewflags[MODE_STACK]      = stackgap;
-            viewflags[MODE_INPPORTS]   = gamepad;
-            viewflags[MODE_MEMPORTS]   = cardstart;
-            viewflags[MODE_BACKTRACE]  = btstart;
-            views (modeflag, offset, viewflags, backtrace);
-            clearflag                  = FALSE;
+            views (modeflag, offset, vflag, backtrace);
+            clearflag                    = FALSE;
         }
 
         ////////////////////////////////////////////////////////////////////////////////
@@ -342,11 +333,11 @@ void main (void)
         // START: remain  in debugger,  but continue normal  execution of
         // CART instructions (occurs on release after press)
         //
-        value                          = gamepad_button_start ();
-        if ((value                    >= BUTTON_IS_PRESSED) &&
-            (continueflag             == CONTINUE_ENABLED))
+        value                            = gamepad_button_start ();
+        if ((value                      >= BUTTON_IS_PRESSED) &&
+            (continueflag               == CONTINUE_ENABLED))
         {
-            continueflag               = CONTINUE_DETRIGGER;
+            continueflag                 = CONTINUE_DETRIGGER;
         }
 
         ////////////////////////////////////////////////////////////////////////////////
@@ -357,27 +348,27 @@ void main (void)
         // with  this, we  are still  in the  debugging monitor,  and can
         // break back to the single-step prompt by pressing START again.
         //
-        else if ((value               <= BUTTON_NOT_PRESSED) &&
-                 (continueflag        == CONTINUE_DETRIGGER))
+        else if ((value                 <= BUTTON_NOT_PRESSED) &&
+                 (continueflag          == CONTINUE_DETRIGGER))
         {
-            continueflag               = CONTINUE_NONE;
-            framestop                  = -1;
+            continueflag                 = CONTINUE_NONE;
+            framestop                    = -1;
         }
 
         ////////////////////////////////////////////////////////////////////////////////
         //
         // debugger interactive interface (for single-step mode)
         //
-        framestop                      = -1;
-        stepflag                       = FALSE;
-        upflag                         = FALSE;
-        yflag                          = FALSE;
-        incflag                        = FALSE;
-        decflag                        = FALSE;
-        exitflag                       = FALSE;
-        if (continueflag              == CONTINUE_ENABLED)
+        framestop                        = -1;
+        stepflag                         = FALSE;
+        upflag                           = FALSE;
+        yflag                            = FALSE;
+        incflag                          = FALSE;
+        decflag                          = FALSE;
+        exitflag                         = FALSE;
+        if (continueflag                == CONTINUE_ENABLED)
         {
-            framestop                  = 0;
+            framestop                    = 0;
         }
 
         ////////////////////////////////////////////////////////////////////////////////
@@ -385,15 +376,15 @@ void main (void)
         // update the history array, cycling out the old, bringing in the
         // new as needed
         //
-        if (count                     == 8) // buffer the previous 7 instructions,
-        {                                   // cycling off the ones as needed
-            for (index                 = 1;
-                 index                <  8;
-                 index                 = index + 1)
+        if (count                       == 8) // buffer the previous 7 instructions,
+        {                                     // cycling off the ones as needed
+            for (index                   = 1;
+                 index                  <  8;
+                 index                   = index + 1)
             {
-                history[index-1]       = history[index]; // oldest one goes away
+                history[index-1]         = history[index]; // oldest one goes away
             }
-            count                      = count - 1; // allow new instruction
+            count                        = count - 1; // allow new instruction
         }
 
         ////////////////////////////////////////////////////////////////////////////////
@@ -401,16 +392,16 @@ void main (void)
         // C: update the C history array, cycling out the old, bringing in the
         // new as needed
         //
-        if (ccount                    == 16) // buffer the previous 15 instructions,
-        {                                   // cycling off the ones as needed
-            for (index                 = 1;
-                 index                <  16;
-                 index                 = index + 1)
+        if (ccount                      == 16) // buffer the previous 15 instructions,
+        {                                      // cycling off the ones as needed
+            for (index                   = 1;
+                 index                  <  16;
+                 index                   = index + 1)
             {
-                chistory[index-1]      = chistory[index];  // oldest one goes away
-                clhistory[index-1]     = clhistory[index]; // oldest one goes away
+                chistory[index-1]        = chistory[index];  // oldest one goes away
+                clhistory[index-1]       = clhistory[index]; // oldest one goes away
             }
-            ccount                     = ccount - 1;       // allow new instruction
+            ccount                       = ccount - 1;       // allow new instruction
         }
 
         ////////////////////////////////////////////////////////////////////////////////
@@ -418,15 +409,15 @@ void main (void)
         // C: if C debugging is available, tend to the chistory array, filling it
         // ONLY with those offsets that actually match an available C line string
         //
-        if (codemode                  == DEBUG_C)
+        if (codemode                    == DEBUG_C)
         {
-            address                    = coffset + 1;
-            num_offsets                = *coffset;  // how many offsets
-            ctmp                       = ccode;     // point at first string offset
-            slen                       = *(ctmp-1); // get the string length
-            for (pos                   = 0;
-                 pos                  <  num_offsets;
-                 pos                   = pos + 1)
+            address                      = coffset + 1;
+            num_offsets                  = *coffset;  // how many offsets
+            ctmp                         = ccode;     // point at first string offset
+            slen                         = *(ctmp-1); // get the string length
+            for (pos                     = 0;
+                 pos                    <  num_offsets;
+                 pos                     = pos + 1)
             {
                 ////////////////////////////////////////////////////////////////////////
                 //
@@ -434,20 +425,20 @@ void main (void)
                 // links to C code. The variable value is the actual offset
                 // we can use for comparison purposes
                 //
-                value                  = *address;
+                value                    = *address;
 
                 ////////////////////////////////////////////////////////////////////////
                 //
                 // does the current address value match the current instruction
                 // offset being processed? If so, we have a match
                 //
-                if (value             == (int) offset)
+                if (value               == (int) offset)
                 {
                     asm { "_ABC:" }
-                    chistory[ccount]   = (int) offset;
-                    clhistory[ccount]  = (int) ctmp;
-                    ccount             = ccount + 1;
-                    cstepflag          = FALSE;
+                    chistory[ccount]     = (int) offset;
+                    clhistory[ccount]    = (int) ctmp;
+                    ccount               = ccount + 1;
+                    cstepflag            = FALSE;
                     break;
                 }
 
@@ -457,15 +448,15 @@ void main (void)
                 // the offset in question, we do not need to go any further:
                 // bail out
                 //
-                else if (value        >  (int) offset)
+                else if (value          >  (int) offset)
                 {
                     break;
                 }
 
-                address                = address + 1;
-                ctmp                   = ctmp + slen; // hop to the next string offset
-                slen                   = *ctmp;       // get the new string word length
-                ctmp                   = ctmp + 1;    // position at start of next string
+                address                  = address + 1;
+                ctmp                     = ctmp + slen; // hop to the next string offset
+                slen                     = *ctmp;       // get the new string word length
+                ctmp                     = ctmp + 1;    // position at start of next string
             }
         }
 
@@ -474,19 +465,19 @@ void main (void)
         // ASM: obtain the next instruction from our CART offset (always happens
         // regardless of debugging mode, since this is what occurs on the CPU)
         //
-        history[count]                 = (int) offset;
-        count                          = count + 1;
+        history[count]                   = (int) offset;
+        count                            = count + 1;
 
-        if (cstepflag                 == TRUE)
+        if (cstepflag                   == TRUE)
         {
-            framestop                  = 1;
+            framestop                    = 1;
         }
 
         ////////////////////////////////////////////////////////////////////////////////
         //
         // single-step loop
         //
-        while (framestop              != 0) // single step loop
+        while (framestop                != 0) // single step loop
         {
             ////////////////////////////////////////////////////////////////////////////
             //
@@ -500,26 +491,26 @@ void main (void)
             // one  yellow;   past  instructions   are  displayed   in  a
             // fading-from-white gradient
             //
-            y                          = 50;
-            if (codemode              == DEBUG_ASM)
+            y                            = 50;
+            if (codemode                == DEBUG_ASM)
             {
-                for (index             = 0;
-                     index            <  count;
-                     index             = index + 1)
+                for (index               = 0;
+                     index              <  count;
+                     index               = index + 1)
                 {
-                    address            = (int *) history[index];
-                    instruction        = *address;
-                    immflag            = instruction & 0x02000000;
-                    if (immflag       >  0)                         // immediate bit
+                    address              = (int *) history[index];
+                    instruction          = *address;
+                    immflag              = instruction & 0x02000000;
+                    if (immflag         >  0)                         // immediate bit
                     {
-                        immediate      = *(address+1);              // deref offset
+                        immediate        = *(address+1);              // deref offset
                     }
                     else
                     {
-                        immediate      = 0;                             // no immediate
+                        immediate        = 0;                             // no immediate
                     }
 
-                    if (index         == (count - 1))
+                    if (index           == (count - 1))
                     {
                         set_multiply_color (color_yellow);
                     }
@@ -533,11 +524,11 @@ void main (void)
                         // the word  representing the RGBA value  is actually
                         // of the form ABGR (note the shifts below)
                         //
-                        value          = 0x3F + (8 * index);
-                        color          = (((value + (index * 24))));       // RED
-                        color         |= (((value + (index * 24))) << 8);  // GREEN
-                        color         |= (((value + (index * 24))) << 16); // BLUE
-                        color         |= (((0xFF))                 << 24); // ALPHA
+                        value            = 0x3F + (8 * index);
+                        color            = (((value + (index * 24))));       // RED
+                        color           |= (((value + (index * 24))) << 8);  // GREEN
+                        color           |= (((value + (index * 24))) << 16); // BLUE
+                        color           |= (((0xFF))                 << 24); // ALPHA
                         set_multiply_color (color);
                     }
 
@@ -567,40 +558,35 @@ void main (void)
                     //    "mov   {immediate}, R1"
                     // }
                     //
-                    if (immflag       >  0)                         // immediate bit
+                    if (immflag         >  0)                         // immediate bit
                     {
-                        address        = address + 1;
+                        address          = address + 1;
                         hexit_zoomed (0, (y + 18), (int)address, 0.75); // immediate
 
                         hexit_zoomed (88, (y + 18), immediate, 0.75);
                     }
 
                     decode (176, y, instruction, immediate);
-                    if (index         == (count - 1))
+                    if (index           == (count - 1))
                     {
                         set_multiply_color (color_white);
                     }
 
-                    y                  = y + 18;
-                    if (immflag       >  0)
+                    y                    = y + 18;
+                    if (immflag         >  0)
                     {
-                        y              = y + 18;
+                        y                = y + 18;
                     }
                 }
             }
 
-            else if (codemode         == DEBUG_C)
+            else if (codemode           == DEBUG_C)
             {
-                if (ccount            == 0)
+                for (index               = 0;
+                     index              <  ccount;
+                     index               = index + 1)
                 {
-                    cstepflag          = TRUE; // short-circuit pressing of down
-                }
-
-                for (index             = 0;
-                     index            <  ccount;
-                     index             = index + 1)
-                {
-                    if (index         == (ccount - 1))
+                    if (index           == (ccount - 1))
                     {
                         set_multiply_color (color_yellow);
                     }
@@ -614,24 +600,24 @@ void main (void)
                         // the word  representing the RGBA value  is actually
                         // of the form ABGR (note the shifts below)
                         //
-                        value          = 0x1F + (16 * index);
-                        color          = (((value + (index * 24))));       // RED
-                        color         |= (((value + (index * 24))) << 8);  // GREEN
-                        color         |= (((value + (index * 24))) << 16); // BLUE
-                        color         |= (((0xFF))                 << 24); // ALPHA
+                        value            = 0x1F + (16 * index);
+                        color            = (((value + (index * 24))));       // RED
+                        color           |= (((value + (index * 24))) << 8);  // GREEN
+                        color           |= (((value + (index * 24))) << 16); // BLUE
+                        color           |= (((0xFF))                 << 24); // ALPHA
                         set_multiply_color (color);
                     }
 
                     asm { "_DEF:" }
-                    address            = (int *) clhistory[index];
+                    address              = (int *) clhistory[index];
                     zprint_zoomed_at (0, y, address, 0.75);
 
-                    if (index         == (ccount - 1))
+                    if (index           == (ccount - 1))
                     {
                         set_multiply_color (color_white);
                     }
 
-                    y                  = y + 18;
+                    y                    = y + 18;
                 }
             }
 
@@ -639,25 +625,20 @@ void main (void)
             //
             // resource view logic
             //
-            viewflags[MODE_MEMORY]     = memstart;
-            viewflags[MODE_STACK]      = stackgap;
-            viewflags[MODE_INPPORTS]   = gamepad;
-            viewflags[MODE_MEMPORTS]   = cardstart;
-            viewflags[MODE_BACKTRACE]  = btstart;
-            views (modeflag, offset, viewflags, backtrace);
+            views (modeflag, offset, vflag, backtrace);
 
             ////////////////////////////////////////////////////////////////////////////
             //
             // Y: toggle debugging modes (C vs ASM)
             //
-            value                      = gamepad_button_y ();
-            if ((value                >= BUTTON_IS_PRESSED) &&
-                (yflag                == FALSE))
+            value                        = gamepad_button_y ();
+            if ((value                  >= BUTTON_IS_PRESSED) &&
+                (yflag                  == FALSE))
             {
-                if (coffset           != NULL)
+                if (coffset             != NULL)
                 {
-                    codemode           = (codemode + 1) % 2;
-                    yflag              = TRUE;
+                    codemode             = (codemode + 1) % 2;
+                    yflag                = TRUE;
                 }
             }
 
@@ -665,84 +646,92 @@ void main (void)
             //
             // UP: recognize key release after being pressed
             //
-            else if ((value           <= BUTTON_NOT_PRESSED) &&
-                (yflag                == TRUE))
+            else if ((value             <= BUTTON_NOT_PRESSED) &&
+                (yflag                  == TRUE))
             {
-                yflag                  = FALSE;
+                yflag                    = FALSE;
             }
 
             ////////////////////////////////////////////////////////////////////////////
             //
             // UP: cycle content display
             //
-            value                      = gamepad_up ();
-            if ((value                >= BUTTON_IS_PRESSED) &&
-                (upflag               == FALSE))
+            value                        = gamepad_up ();
+            if ((value                  >= BUTTON_IS_PRESSED) &&
+                (upflag                 == FALSE))
             {
-                modeflag               = (modeflag + 1) % MAX_MODES;
-                upflag                 = TRUE;
+                modeflag                 = (modeflag + 1) % NUM_MODES;
+                upflag                   = TRUE;
             }
 
             ////////////////////////////////////////////////////////////////////////////
             //
             // UP: recognize key release after being pressed
             //
-            else if ((value           <= BUTTON_NOT_PRESSED) &&
-                (upflag               == TRUE))
+            else if ((value             <= BUTTON_NOT_PRESSED) &&
+                (upflag                 == TRUE))
             {
-                upflag                 = FALSE;
+                upflag                   = FALSE;
             }
 
             ////////////////////////////////////////////////////////////////////////////
             //
             // LEFT: decrement content by 16
             //
-            value                      = gamepad_left ();
-            if ((value                >= BUTTON_IS_PRESSED) &&
-                (decflag              == FALSE))
+            value                        = gamepad_left ();
+            if ((value                  >= BUTTON_IS_PRESSED) &&
+                (decflag                == FALSE))
             {
-                decflag                = TRUE;
-                if (modeflag          == MODE_MEMORY)
+                decflag                  = TRUE;
+                if (modeflag            == MODE_RAM)
                 {
-                    memstart           = memstart - 16;
-                    if (memstart      <  0x00000000)
+                    vflag[MODE_RAM]         = vflag[MODE_RAM] - 16;
+                    if (vflag[MODE_RAM] <  0x00000000)
                     {
-                        memstart       = 0x003FFFF0;
+                        vflag[MODE_RAM]  = 0x003FFFF0;
                     }
                 }
-                else if (modeflag     == MODE_STACK)
+                else if (modeflag       == MODE_REG)
                 {
-                    stackgap           = stackgap - 1;
-                    if (stackgap      <  1)
+                    vflag[MODE_REG]      = vflag[MODE_REG] - 1;
+                    if (vflag[MODE_REG] <  0)
                     {
-                        stackgap       = 1;
+                        vflag[MODE_REG]  = NUM_FORMATS - 1;
                     }
                 }
-                else if (modeflag     == MODE_BACKTRACE)
+                else if (modeflag       == MODE_STA)
                 {
-                    btstart            = btstart - 16;
-                    if (btstart       <  0)
+                    vflag[MODE_STA]      = vflag[MODE_STA] - 1;
+                    if (vflag[MODE_STA] <  1)
                     {
-                        btstart        = 48;
+                        vflag[MODE_STA]  = 1;
                     }
                 }
-                else if (modeflag     == MODE_INPPORTS)
+                else if (modeflag       == MODE_BTR)
                 {
-                    gamepad            = (gamepad - 1) % 4;
-                    if (gamepad       <  0)
+                    vflag[MODE_BTR]      = vflag[MODE_BTR] - 16;
+                    if (vflag[MODE_BTR] <  0)
                     {
-                        gamepad        = 3;
+                        vflag[MODE_BTR]  = 48;
                     }
                 }
-                else if (modeflag     == MODE_MEMPORTS)
+                else if (modeflag       == MODE_INP)
                 {
-                    cardstart          = cardstart - 16;
-                    if (cardstart     <  0x30000000)
+                    vflag[MODE_INP]      = (vflag[MODE_INP] - 1) % 4;
+                    if (vflag[MODE_INP] <  0)
                     {
-                        cardstart      = 0x3003FFF0;
+                        vflag[MODE_INP]  = 3;
                     }
                 }
-                else if (modeflag     == MODE_RNGPORTS)
+                else if (modeflag       == MODE_MEM)
+                {
+                    vflag[MODE_MEM]      = vflag[MODE_MEM] - 16;
+                    if (vflag[MODE_MEM] <  0x30000000)
+                    {
+                        vflag[MODE_MEM]  = 0x3003FFF0;
+                    }
+                }
+                else if (modeflag       == MODE_RNG)
                 {
                     asm
                     {
@@ -759,54 +748,58 @@ void main (void)
             //
             // LEFT: recognize key release after being pressed
             //
-            else if ((value           <= BUTTON_NOT_PRESSED) &&
-                (decflag              == TRUE))
+            else if ((value             <= BUTTON_NOT_PRESSED) &&
+                (decflag                == TRUE))
             {
-                decflag                = FALSE;
+                decflag                  = FALSE;
             }
 
             ////////////////////////////////////////////////////////////////////////////
             //
             // L: decrement content by 256
             //
-            value                      = gamepad_button_l ();
-            if ((value                >= BUTTON_IS_PRESSED) &&
-                (decflag              == FALSE))
+            value                        = gamepad_button_l ();
+            if ((value                  >= BUTTON_IS_PRESSED) &&
+                (decflag                == FALSE))
             {
-                decflag                = 2;
-                if (modeflag          == MODE_MEMORY)
+                decflag                  = 2;
+                if (modeflag            == MODE_RAM)
                 {
-                    memstart           = memstart - 256;
-                    if (memstart      <  0x00000000)
+                    vflag[MODE_RAM]      = vflag[MODE_RAM] - 256;
+                    if (vflag[MODE_RAM] <  0x00000000)
                     {
-                        memstart       = 0x003FFF00;
+                        vflag[MODE_RAM]  = 0x003FFF00;
                     }
                 }
-                else if (modeflag     == MODE_STACK)
+                else if (modeflag       == MODE_REG)
                 {
-                    stackgap           = stackgap - 3;
-                    if (stackgap      <  1)
+                    vflag[MODE_REG]      = FORMAT_HEX;
+                }
+                else if (modeflag       == MODE_STA)
+                {
+                    vflag[MODE_STA]      = vflag[MODE_STA] - 3;
+                    if (vflag[MODE_STA] <  1)
                     {
-                        stackgap       = 1;
+                        vflag[MODE_STA]  = 1;
                     }
                 }
-                else if (modeflag     == MODE_BACKTRACE)
+                else if (modeflag       == MODE_BTR)
                 {
-                    btstart            = 0;
+                    vflag[MODE_BTR]      = 0;
                 }
-                else if (modeflag     == MODE_INPPORTS)
+                else if (modeflag       == MODE_INP)
                 {
-                    gamepad            = 0;
+                    vflag[MODE_INP]      = 0;
                 }
-                else if (modeflag     == MODE_MEMPORTS)
+                else if (modeflag       == MODE_MEM)
                 {
-                    cardstart          = cardstart - 256;
-                    if (cardstart     <  0x30000000)
+                    vflag[MODE_MEM]      = vflag[MODE_MEM] - 256;
+                    if (vflag[MODE_MEM] <  0x30000000)
                     {
-                        cardstart      = 0x3003FF00;
+                        vflag[MODE_MEM]  = 0x3003FF00;
                     }
                 }
-                else if (modeflag     == MODE_RNGPORTS)
+                else if (modeflag       == MODE_RNG)
                 {
                     asm
                     {
@@ -823,58 +816,62 @@ void main (void)
             //
             // L: recognize key release after being pressed
             //
-            else if ((value           <= BUTTON_NOT_PRESSED) &&
-                (decflag              == 2))
+            else if ((value             <= BUTTON_NOT_PRESSED) &&
+                (decflag                == 2))
             {
-                decflag                = FALSE;
+                decflag                  = FALSE;
             }
 
             ////////////////////////////////////////////////////////////////////////////
             //
             // RIGHT: increment content by 16
             //
-            value                      = gamepad_right ();
-            if ((value                >= BUTTON_IS_PRESSED) &&
-                (incflag              == FALSE))
+            value                        = gamepad_right ();
+            if ((value                  >= BUTTON_IS_PRESSED) &&
+                (incflag                == FALSE))
             {
-                incflag                = 2;
-                if (modeflag          == MODE_MEMORY)
+                incflag                  = 2;
+                if (modeflag            == MODE_RAM)
                 {
-                    memstart           = memstart + 16;
-                    if (memstart      >  0x003FFFF0)
+                    vflag[MODE_RAM]      = vflag[MODE_RAM] + 16;
+                    if (vflag[MODE_RAM] >  0x003FFFF0)
                     {
-                        memstart       = 0x00000000;
+                        vflag[MODE_RAM]  = 0x00000000;
                     }
                 }
-                else if (modeflag     == MODE_STACK)
+                else if (modeflag       == MODE_REG)
                 {
-                    stackgap           = stackgap + 1;
-                    if (stackgap      >  18)
+                    vflag[MODE_REG]      = (vflag[MODE_REG] + 1) % NUM_FORMATS;
+                }
+                else if (modeflag       == MODE_STA)
+                {
+                    vflag[MODE_STA]      = vflag[MODE_STA] + 1;
+                    if (vflag[MODE_STA] >  18)
                     {
-                        stackgap       = 18;
+                        vflag[MODE_STA]  = 18;
                     }
                 }
-                else if (modeflag     == MODE_BACKTRACE)
+                else if (modeflag       == MODE_BTR)
                 {
-                    btstart            = btstart  + 16;
-                    if (btstart       >  63)
+                    vflag[MODE_BTR]      = vflag[MODE_BTR]  + 16;
+                    if (vflag[MODE_BTR] >  63)
                     {
-                        btstart        = 0;
+                        vflag[MODE_BTR]  = 0;
                     }
                 }
-                else if (modeflag     == MODE_INPPORTS)
+                else if (modeflag       == MODE_INP)
                 {
-                    gamepad            = (gamepad + 1) % 4;
+                    vflag[MODE_INP]      = (vflag[MODE_INP] + 1) % 4;
                 }
-                else if (modeflag     == MODE_MEMPORTS)
+                else if (modeflag       == MODE_MEM)
                 {
-                    cardstart          = cardstart + 16;
-                    if (cardstart     >  0x3003FFFF)
+                    vflag[MODE_MEM]      = vflag[MODE_MEM] + 16;
+                    if (vflag[MODE_MEM] >  0x3003FFFF)
                     {
-                        cardstart      = 0x30000000;
+                        vflag[MODE_MEM]  = 0x30000000;
                     }
                 }
-                else if (modeflag     == MODE_RNGPORTS)
+                else if (modeflag       == MODE_RNG)
                 {
                     asm
                     {
@@ -891,54 +888,58 @@ void main (void)
             //
             // RIGHT: recognize key release after being pressed
             //
-            else if ((value           <= BUTTON_NOT_PRESSED) &&
-                (incflag              == 2))
+            else if ((value             <= BUTTON_NOT_PRESSED) &&
+                (incflag                == 2))
             {
-                incflag                = FALSE;
+                incflag                  = FALSE;
             }
 
             ////////////////////////////////////////////////////////////////////////////
             //
             // R: increment content by 256
             //
-            value                      = gamepad_button_r ();
-            if ((value                >= BUTTON_IS_PRESSED) &&
-                (incflag              == FALSE))
+            value                        = gamepad_button_r ();
+            if ((value                  >= BUTTON_IS_PRESSED) &&
+                (incflag                == FALSE))
             {
-                incflag                = TRUE;
-                if (modeflag          == MODE_MEMORY)
+                incflag                  = TRUE;
+                if (modeflag            == MODE_RAM)
                 {
-                    memstart           = memstart + 256;
-                    if (memstart      >  0x003FFF00)
+                    vflag[MODE_RAM]      = vflag[MODE_RAM] + 256;
+                    if (vflag[MODE_RAM] >  0x003FFF00)
                     {
-                        memstart       = 0x00000000;
+                        vflag[MODE_RAM]  = 0x00000000;
                     }
                 }
-                else if (modeflag     == MODE_STACK)
+                else if (modeflag       == MODE_REG)
                 {
-                    stackgap           = stackgap + 3;
-                    if (stackgap      >  18)
+                    vflag[MODE_REG]      = NUM_FORMATS - 1;
+                }
+                else if (modeflag       == MODE_STA)
+                {
+                    vflag[MODE_STA]      = vflag[MODE_STA] + 3;
+                    if (vflag[MODE_STA] >  18)
                     {
-                        stackgap       = 18;
+                        vflag[MODE_STA]  = 18;
                     }
                 }
-                else if (modeflag     == MODE_BACKTRACE)
+                else if (modeflag       == MODE_BTR)
                 {
-                    btstart            = 48;
+                    vflag[MODE_BTR]      = 48;
                 }
-                else if (modeflag     == MODE_INPPORTS)
+                else if (modeflag       == MODE_INP)
                 {
-                    gamepad            = 3;
+                    vflag[MODE_INP]      = 3;
                 }
-                else if (modeflag     == MODE_MEMPORTS)
+                else if (modeflag       == MODE_MEM)
                 {
-                    cardstart          = cardstart + 256;
-                    if (cardstart     >  0x3003FF00)
+                    vflag[MODE_MEM]      = vflag[MODE_MEM] + 256;
+                    if (vflag[MODE_MEM] >  0x3003FF00)
                     {
-                        cardstart      = 0x30000000;
+                        vflag[MODE_MEM]  = 0x30000000;
                     }
                 }
-                else if (modeflag     == MODE_RNGPORTS)
+                else if (modeflag       == MODE_RNG)
                 {
                     asm
                     {

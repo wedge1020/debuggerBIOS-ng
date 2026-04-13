@@ -407,10 +407,10 @@ void draw_logo (int  modeflag, int *coffset)
 
     switch (modeflag)
     {
-        case MODE_MEMORY:
-        case MODE_STACK:
-        case MODE_BACKTRACE:
-        case MODE_MEMPORTS:
+        case MODE_RAM:
+        case MODE_STA:
+        case MODE_BTR:
+        case MODE_MEM:
             print_zoomed_at (100, 32, "LEFT/RIGHT adjust by 16, L/R adjust by 256", 0.50);
             break;
     }
