@@ -53,7 +53,7 @@ void main (void)
     int [16] chistory;     // previous instructions to display
     int      ccount;       // tracking history array content quantity
     int [16] clhistory;
-    int      iter;
+    int      cstepflag;
 
     ////////////////////////////////////////////////////////////////////////////////////
     //
@@ -203,12 +203,14 @@ void main (void)
             coffset                    = coffset + 1;
             ccode                      = coffset + (int) *coffset;
             ccode                      = ccode + 2;
+            cstepflag                  = TRUE;
         }
     }
     else
     {
         coffset                        = NULL;
         ccode                          = NULL;
+        cstepflag                      = FALSE;
     }
 
     ////////////////////////////////////////////////////////////////////////////////////
@@ -372,10 +374,10 @@ void main (void)
                  index                <  16;
                  index                 = index + 1)
             {
-                chistory[index-1]      = chistory[index]; // oldest one goes away
+                chistory[index-1]      = chistory[index];  // oldest one goes away
                 clhistory[index-1]     = clhistory[index]; // oldest one goes away
             }
-            ccount                     = ccount - 1; // allow new instruction
+            ccount                     = ccount - 1;       // allow new instruction
         }
 
         ////////////////////////////////////////////////////////////////////////////////
@@ -412,6 +414,7 @@ void main (void)
                     chistory[ccount]   = (int) offset;
                     clhistory[ccount]  = (int) ctmp;
                     ccount             = ccount + 1;
+                    cstepflag          = FALSE;
                     break;
                 }
 
@@ -440,6 +443,11 @@ void main (void)
         //
         history[count]                 = (int) offset;
         count                          = count + 1;
+
+        if (cstepflag                 == TRUE)
+        {
+            framestop                  = 1;
+        }
 
         ////////////////////////////////////////////////////////////////////////////////
         //
@@ -550,10 +558,10 @@ void main (void)
 
             else if (codemode         == DEBUG_C)
             {
-				if (ccount            == 0)
-				{
-					stepflag           = TRUE; // short-circuit pressing of down
-				}
+                if (ccount            == 0)
+                {
+                    cstepflag          = TRUE; // short-circuit pressing of down
+                }
 
                 for (index             = 0;
                      index            <  ccount;
@@ -573,7 +581,7 @@ void main (void)
                         // the word  representing the RGBA value  is actually
                         // of the form ABGR (note the shifts below)
                         //
-                        value          = 0x3F + (8 * index);
+                        value          = 0x3F + (16 * index);
                         color          = (((value + (index * 24))));       // RED
                         color         |= (((value + (index * 24))) << 8);  // GREEN
                         color         |= (((value + (index * 24))) << 16); // BLUE
@@ -581,32 +589,9 @@ void main (void)
                         set_multiply_color (color);
                     }
 
-                    /*
-                        if ((int) address == chistory[pos])
-                        {
-                            ctmp           = ccode; // point at first string
-                            slen           = *(ctmp-1); // get the string word length
-                            cotmp          = coffset + 1;
-                            for (iter      = 0;
-                                 iter     <  num_offsets;
-                                 iter      = iter + 1)
-                            {
-                                if (*cotmp == (int) address) // found the offset
-                                {*/
-					asm { "_DEF:" }
+                    asm { "_DEF:" }
                     address            = (int *) clhistory[index];
                     zprint_zoomed_at (0, y, address, 0.75);
-                                   /* break;
-                                }
-
-                                cotmp      = cotmp + 1;   // proceed to next offset
-                                ctmp       = ctmp + slen; // hop to the next string offset
-                                slen       = *ctmp;       // get the new string word length
-                                ctmp       = ctmp + 1;    // position at start of next string
-                            }
-                            break;
-                        }
-                    }*/
 
                     if (index         == (ccount - 1))
                     {
@@ -899,6 +884,10 @@ void main (void)
             if (value                 >= BUTTON_IS_PRESSED)
             {
                 stepflag               = TRUE;
+                if (codemode          == DEBUG_C)
+                {
+                    cstepflag          = TRUE; // short-circuit pressing of down
+                }
             }
 
             ////////////////////////////////////////////////////////////////////////////
