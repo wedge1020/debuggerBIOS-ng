@@ -35,6 +35,42 @@ various  debugging views  from  that  of the  original,  although due  to
 continuing  to  develop  against  the class  repository,  many  of  those
 features are present in the original `debuggerBIOS` too.
 
+## STATUS
+
+Current project status:
+
+  - [x] single-step mode
+  - [ ] continue mode
+  - [ ] exit mode
+  - [x] resource views
+    - [x] CART registers
+    - [x] RAM
+    - [x] stack
+    - [x] backtrace
+    - [ ] TIM ports
+    - [ ] RNG port
+    - [x] GPU ports
+    - [x] SPU ports
+    - [x] INP ports
+    - [x] CAR ports
+    - [x] MEM port and MEMCARD 
+  - [x] emulated branch instructions
+  - [x] assembly debugging mode
+  - [x] C debugging mode (with CART preparation)
+
+TODO (in no particular order):
+
+  * RNG port view, allow manipulation of next RNG value to CART
+  * check connected MEMCART for name / length
+  * C function names in backtrace
+  * fix for C history color gradients 
+  * figure out display issues with continue mode
+  * figure out display issues with exit mode
+  * pack passed flags into an array to simplify the call to `view()`
+  * rudimentary break points
+  * only display C code for main .c file / not header files
+  * line numbers in displayed C code
+
 ## SCREENSHOTS
 
 ### STARTUP
@@ -234,11 +270,11 @@ presence:
 
   * `0x003FFB9F` base of cartridge stack (initial CART BP/SP)
   * `0x003FFBA0` - `0x003FFBAF` CART context register data
-  * `0x003FFBB0` upper bound of debugger stack (1023 total words)
-  * `0x003FFFAF` base of debugger/BIOS stack
+  * `0x003FFBB0` - `0x003FFFAF` debugger stack (1023 total words)
   * `0x003FFFB0` - `0x003FFFE2` custom RAM subroutine (50 total words)
-  * `0x003FFFEE` offset of current CART instruction
-  * `0x003FFFEF` address of where our jumped-to routine will "return" to
+  * `0x003FFFE3` - `0x003FFFEF` storage for other needed values
+    * `0x003FFFEE` offset of current CART instruction
+    * `0x003FFFEF` address of where our jumped-to routine will "return"
   * `0x003FFFF0` - `0x003FFFFF` BIOS context register data
 
 This  will  allow  the  debugger to  maintain  important  data,  separate
