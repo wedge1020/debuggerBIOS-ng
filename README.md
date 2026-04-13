@@ -35,7 +35,67 @@ various  debugging views  from  that  of the  original,  although due  to
 continuing  to  develop  against  the class  repository,  many  of  those
 features are present in the original `debuggerBIOS` too.
 
-## STATUS
+## OPERATION
+
+The aim of  this custom BIOS is to provide an  interactive debugger within
+the Vircon32 environment for the purposes of debugging cartridge code, or
+merely studying the operation of the system.
+
+Available and planned functionality includes:
+
+| FEATURE                                                   | STATUS |
+| --------------------------------------------------------- | ------ |
+| machine language decoding into assembly                   | - [x]  |
+| display of offset and assembly code                       | - [x]  |
+| single-stepping through assemble (via `DOWN`)             | - [x]  |
+| continue mode (via `START`)                               | - [ ]  |
+| escape mode (via `X`) to leave debugger                   | - [ ]  |
+| C debugging mode (with prepared CART)                     | - [x]  |
+| debugging mode toggle (via `Y`)                           | - [x]  |
+| resource views (via `UP`)                                 | - [x]  |
+| adjustment of view data (`LEFT`/`RIGHT`) by 16            | - [x]  |
+| adjustment of view data (`L`/`R`) by 256                  | - [x]  |
+| view: CART registers (including `IP`/`IR`/`IV` registers) | - [x]  |
+| view: RAM                                                 | - [x]  |
+| view: current stack (based on CART `BP` and `SP`)         | - [x]  |
+| view: subroutine backtrace (machine code offsets)         | - [x]  |
+| view: C function backtrace                                | - [ ]  |
+| view: TIM ports                                           | - [ ]  |
+| view: RNG port                                            | - [ ]  |
+| view: alteration of next RNG value to be given to CART    | - [ ]  |
+| view: GPU ports                                           | - [x]  |
+| view: SND ports                                           | - [x]  |
+| view: INP ports                                           | - [x]  |
+| view: CAR ports                                           | - [x]  |
+| view: MEM port (and memory card contents)                 | - [x]  |
+| emulation: all branch mode instructions                   | - [x]  |
+
+  * display of offset and assembly code
+  * display of line number and C code, if debugging information present
+  * single-stepping through assembly code (via `DOWN`)
+  * continue mode (via `START`), allowing CART to run uninterrupted
+    * debugger is still present, and single-step can be re-engaged
+    * press `START` again to return to single-step mode
+  * escape mode (`X` button), leaving the debugger entirely
+  * toggle between C and Assembly mode (`Y` button)
+    * only when C debug information is found, otherwith ASM only
+  * user-cycled display of various system resources (via `UP`):
+    * CART register array
+    * console RAM (range adjustable)
+    * stack (based on `BP` and `SP` register values)
+    * backtrace
+    * GPU IOPorts
+    * SPU IOPorts
+    * INP IOPorts
+    * CAR IOPorts
+    * MEM IOPorts and contents
+
+Through  the use  of  the  configured gamepad  (defaults  to gamepad  0),
+various debugger features can be utilized and accessed.
+
+NOTE:  the   debuggerBIOS-ng  gamepad  can  actually   be  configured  by
+editing  the  `config.h`   file  in  the  base  of   the  repository  and
+rebuilding/reinstalling the BIOS.
 
 Current project status:
 
@@ -117,41 +177,6 @@ operation of the CART:
 
 As part of Vircon32 operations, a  BIOS/firmware is needed to perform the
 essential tasks of starting up the system and system error handling.
-
-## OPERATION
-
-The aim of  this CustomBios is to provide an  interactive debugger within
-the Vircon32 environment for the purposes of debugging cartridge code, or
-merely studying the operation of the system.
-
-Functionality includes:
-
-  * display of offset and assembly code
-  * display of line number and C code, if debugging information present
-  * single-stepping through assembly code (via `DOWN`)
-  * continue mode (via `START`), allowing CART to run uninterrupted
-    * debugger is still present, and single-step can be re-engaged
-    * press `START` again to return to single-step mode
-  * escape mode (`X` button), leaving the debugger entirely
-  * toggle between C and Assembly mode (`Y` button)
-    * only when C debug information is found, otherwith ASM only
-  * user-cycled display of various system resources (via `UP`):
-    * CART register array
-    * console RAM (range adjustable)
-    * stack (based on `BP` and `SP` register values)
-    * backtrace
-    * GPU IOPorts
-    * SPU IOPorts
-    * INP IOPorts
-    * CAR IOPorts
-    * MEM IOPorts and contents
-
-Through  the use  of  the  configured gamepad  (defaults  to gamepad  0),
-various debugger features can be utilized and accessed.
-
-NOTE:  the   debuggerBIOS-ng  gamepad  can  actually   be  configured  by
-editing  the  `config.h`   file  in  the  base  of   the  repository  and
-rebuilding/reinstalling the BIOS.
 
 ## LIMITATIONS
 
