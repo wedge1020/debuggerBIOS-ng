@@ -65,12 +65,12 @@ void  views (int  modeflag, int *offset, int *viewflags, int *backtrace)
                 if (index         <  10)
                 {
                     data[2]        = ':';
-					data[3]        = 0;
+                    data[3]        = 0;
                 }
                 else
                 {
                     data[3]        = ':';
-					data[4]        = 0;
+                    data[4]        = 0;
                 }
                 print_at (490, 18 + (index * 18), data); 
 
@@ -86,7 +86,7 @@ void  views (int  modeflag, int *offset, int *viewflags, int *backtrace)
                 // display CART register value (backed up in memory)
                 //
                 address            = (int *) ADDR_CART_REGISTERS;
-				value              = *(address+index);
+                value              = *(address+index);
                 switch (viewval)
                 {
                     case FORMAT_HEX:
@@ -100,7 +100,7 @@ void  views (int  modeflag, int *offset, int *viewflags, int *backtrace)
                         break;
 
                     case FORMAT_FLOAT:
-						fvalue     = (float) *(address+index);
+                        fvalue     = (float) *(address+index);
                         ftoa (fvalue, data);
                         //print_zoomed_at (540, 18 + (index * 18), data, 0.75);
                         print_at (540, 18 + (index * 18), data);
