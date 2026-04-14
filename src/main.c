@@ -8,48 +8,48 @@ void main (void)
     //
     // Declare variables - note their position relative to BP
     //
-    int     *code;        // [BP-1]: pointer to our dynamic code
-    int     *offset;      // [BP-2]: address of instruction to process
-    int      instruction; // [BP-3]: raw data of instruction
-    int      immediate;   // [BP-4]: immediate value of instruction
-    int      immflag;     // [BP-5]: immediate flag of instruction
-    int      index;       // [BP-6]: index for loops and sequences
-    int      y;
-    int [8]  history;     // previous instructions to display
-    int      count;       // tracking history array content quantity
-    int      pos;         // another index variable
-    int     *address;
-    int     *coffset;     // pointer to C code offset array
-    int     *ccode;       // pointer to embedded C code
-    int     *ctmp;        // pointer to embedded C code
-    int     *cotmp;       // pointer to embedded C code offset
-    int      slen;
-    int      num_offsets;
-    int      value;
-    int      framestop;
-    int      stepflag;
-    int      modeflag;
-    int      codemode;
-    int      yflag;
-    int      continueflag;
-    int      exitflag;
-    int      upflag;
-    int      incflag;
-    int      decflag;
-    int      clearflag;
-    int      emuflag;
-    int      color;
-    int      srcreg;
-    int      dstreg;
-    int      port;
-    int    **mem;
-    int [64] backtrace;
-    int      btrace;
-    int [16] chistory;     // previous instructions to display
-    int      ccount;       // tracking history array content quantity
-    int [16] clhistory;
-    int      cstepflag;
-    int [NUM_MODES] vflag;
+    int             *code;        // [BP-1]: pointer to our dynamic code
+    int             *offset;      // [BP-2]: address of instruction to process
+    int              instruction; // [BP-3]: raw data of instruction
+    int              immediate;   // [BP-4]: immediate value of instruction
+    int              immflag;     // [BP-5]: immediate flag of instruction
+    int              index;       // [BP-6]: index for loops and sequences
+    int              y;
+    int [8]          history;     // previous instructions to display
+    int              count;       // tracking history array content quantity
+    int              pos;         // another index variable
+    int             *address;
+    int             *coffset;     // pointer to C code offset array
+    int             *ccode;       // pointer to embedded C code
+    int             *ctmp;        // pointer to embedded C code
+    int             *memaddr;
+    int              slen;
+    int              num_offsets;
+    int              value;
+    int              framestop;
+    int              stepflag;
+    int              modeflag;
+    int              codemode;
+    int              yflag;
+    int              continueflag;
+    int              exitflag;
+    int              upflag;
+    int              incflag;
+    int              decflag;
+    int              clearflag;
+    int              emuflag;
+    int              color;
+    int              srcreg;
+    int              dstreg;
+    int              port;
+    int            **mem;
+    int [64]         backtrace;
+    int              btrace;
+    int [16]         chistory;     // previous instructions to display
+    int              ccount;       // tracking history array content quantity
+    int [16]         clhistory;
+    int              cstepflag;
+    int [NUM_MODES]  vflag;
 
     ////////////////////////////////////////////////////////////////////////////////////
     //
@@ -102,7 +102,7 @@ void main (void)
     // 0x003FFFEC CART angle
     // 0x003FFFED CART gamepad id
     // 0x003FFFEE offset of current CART instruction
-    // 0x003FFFEF address of where our jumped-to routine will "return" to
+    // 0x003FFFEF address of where our jumped-to routine will "return"
     // 0x003FFFF0    (R0)  value from the context of the BIOS ROM
     // 0x003FFFF1    (R1)  value from the context of the BIOS ROM
     // 0x003FFFF2    (R2)  value from the context of the BIOS ROM
@@ -186,14 +186,6 @@ void main (void)
         "ISUB  R9,        1"                  // -1 to get offset
         "MOV   {coffset}, R9"
     }
-    /*
-        "MOV   R10,       [R9]"
-        "ISUB  R9,        R10"
-        "IADD  R9,        1"
-        "MOV   {coffset}, R9"
-        "POP   R10"
-        "POP   R9"
-    }*/
 
     //////////////////////////////////////////////////////////////////////////
     //
@@ -221,7 +213,7 @@ void main (void)
             codemode                   = DEBUG_C;
             coffset                    = coffset + 1;
             ccode                      = coffset + (int) *coffset;
-            ccode                      = ccode + 2;
+            ccode                      = ccode   + 2;
             cstepflag                  = TRUE;
         }
     }
@@ -436,7 +428,6 @@ void main (void)
                 //
                 if (value               == (int) offset)
                 {
-                    asm { "_ABC:" }
                     chistory[ccount]     = (int) offset;
                     clhistory[ccount]    = (int) ctmp;
                     ccount               = ccount + 1;
@@ -470,12 +461,6 @@ void main (void)
         history[count]                   = (int) offset;
         count                            = count + 1;
 
-        /*
-        if (cstepflag                   == TRUE)
-        {
-            framestop                    = 1;
-        }*/
-
         ////////////////////////////////////////////////////////////////////////////////
         //
         // single-step loop
@@ -503,6 +488,30 @@ void main (void)
                 {
                     address              = (int *) history[index];
                     instruction          = *address;
+
+                    ////////////////////////////////////////////////////////////////////
+                    //
+                    // as some instructions may  have immediate data, we need
+                    // to check  if the  current instruction  has it,  and to
+                    // obtain  it if  so (if  not, set  'immediate' to  0 and
+                    // otherwise ignore it).
+                    //
+                    // We do this by masking  out all bits in the instruction
+                    // save for the immediate flag. If the resulting value is
+                    // greater than 0,  that bit is set, that  means there is
+                    // immediate data.
+                    //
+                    // This is what  we came up with initially  in class, but
+                    // then I later  realized we can do this in  C, as we did
+                    // above for instruction:
+                    //
+                    // asm
+                    // {
+                    //    "mov   R0,          {offset}"
+                    //    "mov   R1,          [R0]"
+                    //    "mov   {immediate}, R1"
+                    // }
+                    //
                     immflag              = instruction & 0x02000000;
                     if (immflag         >  0)                         // immediate bit
                     {
@@ -535,38 +544,23 @@ void main (void)
                         set_multiply_color (color);
                     }
 
+                    ////////////////////////////////////////////////////////////////////
+                    //
+                    // display the instruction offset and hex
+                    //
                     hexit_zoomed (0,  y, (int) address, 0.75); // instruction addr
                     hexit_zoomed (88, y, instruction,   0.75); // instruction hex
 
                     ////////////////////////////////////////////////////////////////////
                     //
-                    // as some instructions may  have immediate data, we need
-                    // to check  if the  current instruction  has it,  and to
-                    // obtain  it if  so (if  not, set  'immediate' to  0 and
-                    // otherwise ignore it).
+                    // if there is immediate data, display that on the next line
                     //
-                    // We do this by masking  out all bits in the instruction
-                    // save for the immediate flag. If the resulting value is
-                    // greater than 0,  that bit is set, that  means there is
-                    // immediate data.
-                    //
-                    // This is what  we came up with initially  in class, but
-                    // then I later  realized we can do this in  C, as we did
-                    // above for instruction:
-                    //
-                    // asm
-                    // {
-                    //    "mov   R0,          {offset}"
-                    //    "mov   R1,          [R0]"
-                    //    "mov   {immediate}, R1"
-                    // }
-                    //
-                    if (immflag         >  0)                         // immediate bit
+                    if (immflag         >  0)
                     {
                         address          = address + 1;
-                        hexit_zoomed (0, (y + 18), (int)address, 0.75); // immediate
+                        hexit_zoomed (0,  (y + 18), (int) address, 0.75);
 
-                        hexit_zoomed (88, (y + 18), immediate, 0.75);
+                        hexit_zoomed (88, (y + 18), immediate,     0.75);
                     }
 
                     decode (176, y, instruction, immediate);
@@ -613,7 +607,6 @@ void main (void)
                         set_multiply_color (color);*/
                     }
 
-                    asm { "_DEF:" }
                     address              = (int *) clhistory[index];
                     zprint_zoomed_at (0, y, address, 0.75);
 
@@ -738,6 +731,9 @@ void main (void)
                 }
                 else if (modeflag       == MODE_RNG)
                 {
+                    memaddr              = (int *) ADDR_PORT_RNGVALUE;
+                    *memaddr             = *memaddr - 1;
+                    /*
                     asm
                     {
                         "PUSH  R0"
@@ -746,6 +742,7 @@ void main (void)
                         "MOV   [0x003FFFE1], R0"
                         "POP   R0"
                     }
+                    */
                 }
             }
 
@@ -806,6 +803,9 @@ void main (void)
                 }
                 else if (modeflag       == MODE_RNG)
                 {
+                    memaddr              = (int *) ADDR_PORT_RNGVALUE;
+                    *memaddr             = *memaddr - 100;
+                    /*
                     asm
                     {
                         "PUSH  R0"
@@ -814,6 +814,7 @@ void main (void)
                         "MOV   [0x003FFFE1], R0"
                         "POP   R0"
                     }
+                    */
                 }
             }
 
@@ -878,6 +879,9 @@ void main (void)
                 }
                 else if (modeflag       == MODE_RNG)
                 {
+                    memaddr              = (int *) ADDR_PORT_RNGVALUE;
+                    *memaddr             = *memaddr + 1;
+                    /*
                     asm
                     {
                         "PUSH  R0"
@@ -886,6 +890,7 @@ void main (void)
                         "MOV   [0x003FFFE1], R0"
                         "POP   R0"
                     }
+                    */
                 }
             }
 
@@ -946,6 +951,9 @@ void main (void)
                 }
                 else if (modeflag       == MODE_RNG)
                 {
+                    address              = (int *) ADDR_PORT_RNGVALUE;
+                    *address             = *address + 100;
+                    /*
                     asm
                     {
                         "PUSH  R0"
@@ -954,6 +962,7 @@ void main (void)
                         "MOV   [0x003FFFE1], R0"
                         "POP   R0"
                     }
+                    */
                 }
             }
 
@@ -1159,14 +1168,11 @@ void main (void)
                 //
                 // update CART cyclecounter
                 //
-                asm
-                {
-                    "PUSH  R0"
-                    "MOV   R0,           [0x003FFFE0]"
-                    "IADD  R0,           1"
-                    "MOV   [0x003FFFE0], R0"
-                    "POP   R0"
-                }
+#define  ADDR_PORT_TIMFRAME  0x003FFFDF
+#define  ADDR_PORT_TIMCYCLE  0x003FFFE0
+#define  ADDR_PORT_RNGVALUE  0x003FFFE1
+                memaddr                = (int *) ADDR_PORT_TIMCYCLE;
+                *memaddr               = *memaddr + 1;
                 continue;
 
             ////////////////////////////////////////////////////////////////////////////
@@ -1212,14 +1218,8 @@ void main (void)
                 //
                 // update CART cyclecounter
                 //
-                asm
-                {
-                    "PUSH  R0"
-                    "MOV   R0,           [0x003FFFE0]"
-                    "IADD  R0,           1"
-                    "MOV   [0x003FFFE0], R0"
-                    "POP   R0"
-                }
+                memaddr                = (int *) ADDR_PORT_TIMCYCLE;
+                *memaddr               = *memaddr + 1;
                 continue;
 
             ////////////////////////////////////////////////////////////////////////////
@@ -1251,14 +1251,8 @@ void main (void)
                 //
                 // update CART cyclecounter
                 //
-                asm
-                {
-                    "PUSH  R0"
-                    "MOV   R0,           [0x003FFFE0]"
-                    "IADD  R0,           1"
-                    "MOV   [0x003FFFE0], R0"
-                    "POP   R0"
-                }
+                memaddr                = (int *) ADDR_PORT_TIMCYCLE;
+                *memaddr               = *memaddr + 1;
                 continue;
 
             case OPCODE_JT:
@@ -1286,14 +1280,8 @@ void main (void)
                 //
                 // update CART cyclecounter
                 //
-                asm
-                {
-                    "PUSH  R0"
-                    "MOV   R0,           [0x003FFFE0]"
-                    "IADD  R0,           1"
-                    "MOV   [0x003FFFE0], R0"
-                    "POP   R0"
-                }
+                memaddr                = (int *) ADDR_PORT_TIMCYCLE;
+                *memaddr               = *memaddr + 1;
                 continue;
 
             case OPCODE_JF:
@@ -1321,14 +1309,8 @@ void main (void)
                 //
                 // update CART cyclecounter
                 //
-                asm
-                {
-                    "PUSH  R0"
-                    "MOV   R0,           [0x003FFFE0]"
-                    "IADD  R0,           1"
-                    "MOV   [0x003FFFE0], R0"
-                    "POP   R0"
-                }
+                memaddr                = (int *) ADDR_PORT_TIMCYCLE;
+                *memaddr               = *memaddr + 1;
                 continue;
 
             ////////////////////////////////////////////////////////////////////////////
@@ -1344,6 +1326,9 @@ void main (void)
                 //
                 // increment CART framecounter
                 //
+                memaddr                = (int *) ADDR_PORT_TIMFRAME;
+                *memaddr               = *memaddr + 1;
+                /*
                 asm
                 {
                     "PUSH  R0"
@@ -1352,19 +1337,14 @@ void main (void)
                     "MOV   [0x003FFFDF], R0"
                     "POP   R0"
                 }
+                */
 
                 ////////////////////////////////////////////////////////////////////////
                 //
                 // reset CART cyclecounter
                 //
-                asm
-                {
-                    "PUSH  R0"
-                    "MOV   R0,           [0x003FFFE0]"
-                    "MOV   R0,           0"
-                    "MOV   [0x003FFFE0], R0"
-                    "POP   R0"
-                }
+                memaddr                = (int *) ADDR_PORT_TIMCYCLE;
+                *memaddr               = 0;
 
                 emuflag                    = FALSE;
                 break;
@@ -1385,7 +1365,9 @@ void main (void)
                     // for the CART
                     //
                     case TIM_FRAMECOUNTER:
+                        memaddr            = (int *) ADDR_PORT_TIMFRAME;
                         address            = (int *) (ADDR_CART_REGISTERS + dstreg);
+                        /*
                         asm
                         {
                             "PUSH  R0"
@@ -1393,7 +1375,8 @@ void main (void)
                             "MOV   {value},      R0"
                             "POP   R0"
                         }
-                        *address           = value;
+                        */
+                        *address           = *memaddr;
                         break;
 
                     ////////////////////////////////////////////////////////////////////
@@ -1402,7 +1385,9 @@ void main (void)
                     // for the CART
                     //
                     case TIM_CYCLECOUNTER:
+                        memaddr            = (int *) ADDR_PORT_TIMCYCLE;
                         address            = (int *) (ADDR_CART_REGISTERS + dstreg);
+                        /*
                         asm
                         {
                             "PUSH  R0"
@@ -1410,7 +1395,8 @@ void main (void)
                             "MOV   {value},      R0"
                             "POP   R0"
                         }
-                        *address           = value;
+                        */
+                        *address           = *memaddr;
                         break;
 
                     ////////////////////////////////////////////////////////////////////
@@ -1421,17 +1407,16 @@ void main (void)
                     // instruction; if not, it lets it process)
                     //
                     case RNG_CURRENTVALUE:
+                        memaddr            = (int *) ADDR_PORT_RNGVALUE;
                         address            = (int *) (ADDR_CART_REGISTERS + dstreg);
+                        *address           = *memaddr;
                         asm
                         {
                             "PUSH  R0"
-                            "MOV   R0,           [0x003FFFE1]"
-                            "MOV   {value},      R0"
                             "IN    R0,           RNG_CurrentValue"
                             "MOV   [0x003FFFE1], R0"
                             "POP   R0"
                         }
-                        *address           = value;
                         break;
 
                     default:
@@ -1497,16 +1482,8 @@ void main (void)
             //
             // update TIM_CycleCounter
             //
-            asm
-            {
-                "PUSH  R0"
-                "MOV   R0,           0xDEADBEEF"
-                "MOV   [0x003FFFE2], R0"
-                "MOV   R0,           [0x003FFFE0]"
-                "IADD  R0,           1"
-                "MOV   [0x003FFFE0], R0"
-                "POP   R0"
-            }
+            memaddr                    = (int *) ADDR_PORT_TIMCYCLE;
+            *memaddr                   = *memaddr + 1;
             continue;
         }
 
@@ -1663,6 +1640,11 @@ void main (void)
         // any  branching),  it will  "just  work",  and  we can  do  any
         // post-processing as needed.
         //
+        // We don't actually want do a CALL, since it would impact what's
+        // on the stack, and being a BIOS element, would pollute the CART
+        // stack. So instead, we JMP to it, and finangle the ability  for
+        // getting back via some label hackery.
+        //
         // The  start of  the subroutine  is  the address  stored in  the
         // 'code' integer pointer. So, JMP to it:
         //
@@ -1761,14 +1743,8 @@ void main (void)
         //
         // increment the CART cycle counter
         //
-        asm
-        {
-            "PUSH  R0"
-            "MOV   R0,           [0x003FFFE0]"
-            "IADD  R0,           1"
-            "MOV   [0x003FFFE0], R0"
-            "POP   R0"
-        }
+        memaddr                        = (int *) ADDR_PORT_TIMCYCLE;
+        *memaddr                       = *memaddr + 1;
     }
 
     asm { "hlt" }

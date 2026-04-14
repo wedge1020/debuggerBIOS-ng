@@ -73,8 +73,8 @@ rebuilding/reinstalling the BIOS.
 Current project status:
 
   - [x] single-step mode
-  - [ ] continue mode
-  - [ ] exit mode
+  - [x] continue mode
+  - [x] exit mode
   - [x] resource views
     - [x] CART registers
       - [x] general registers
@@ -102,7 +102,7 @@ Current project status:
     - [x] `JF`
   - [x] conditional emulation of other instructions
     - [x] `IN` for `RNG_CurrentValue`- debugging overrides for value
-    - [ ] `OUT` for various `GPUCommand` writes
+    - [x] `OUT` for various `GPUCommand` writes
   - [x] assembly debugging mode
     - [x] memory offsets
     - [x] raw hex and decoded assembly

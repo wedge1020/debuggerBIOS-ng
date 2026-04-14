@@ -17,7 +17,7 @@
 //
 enum error_codes
 {
-    error_memory_read = 0,
+    error_memory_read      = 0,
     error_memory_write,
     error_port_read,
     error_port_write,
@@ -145,6 +145,9 @@ struct error_message
 #define  ADDR_CART_OFFSET    0x003FFFEE
 #define  ADDR_CUSTOM_RETURN  0x003FFFEF
 #define  ADDR_BIOS_REGISTERS 0x003FFFF0
+#define  ADDR_PORT_TIMFRAME  0x003FFFDF
+#define  ADDR_PORT_TIMCYCLE  0x003FFFE0
+#define  ADDR_PORT_RNGVALUE  0x003FFFE1
 
 ////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -160,37 +163,37 @@ struct error_message
 //
 // Pre-processor: continue mode settings
 //
-#define  CONTINUE_NONE      0
-#define  CONTINUE_ENTRIGGER 1
-#define  CONTINUE_ENABLED   2
-#define  CONTINUE_DETRIGGER 3
+#define  CONTINUE_NONE        0
+#define  CONTINUE_ENTRIGGER   1
+#define  CONTINUE_ENABLED     2
+#define  CONTINUE_DETRIGGER   3
 
 ////////////////////////////////////////////////////////////////////////////////////////
 //
 // Pre-processor: debugger view modes
 //
-#define  MODE_NONE          0
-#define  MODE_REG           1
-#define  MODE_RAM           2
-#define  MODE_STA           3
-#define  MODE_BTR           4
-#define  MODE_TIM           5
-#define  MODE_RNG           6
-#define  MODE_GPU           7
-#define  MODE_SPU           8
-#define  MODE_INP           9
-#define  MODE_CAR           10
-#define  MODE_MEM           11
-#define  NUM_MODES          12
+#define  MODE_NONE            0
+#define  MODE_REG             1
+#define  MODE_RAM             2
+#define  MODE_STA             3
+#define  MODE_BTR             4
+#define  MODE_TIM             5
+#define  MODE_RNG             6
+#define  MODE_GPU             7
+#define  MODE_SPU             8
+#define  MODE_INP             9
+#define  MODE_CAR             10
+#define  MODE_MEM             11
+#define  NUM_MODES            12
 
 ////////////////////////////////////////////////////////////////////////////////////////
 //
 // Pre-processor: data formats
 //
-#define  FORMAT_HEX      0
-#define  FORMAT_INTEGER  1
-#define  FORMAT_FLOAT    2
-#define  NUM_FORMATS     3
+#define  FORMAT_HEX           0
+#define  FORMAT_INTEGER       1
+#define  FORMAT_FLOAT         2
+#define  NUM_FORMATS          3
 
 ////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -287,7 +290,6 @@ void  print_hex_value     (int  x,     int  y,    int *name,        int    value
 void  print_zoomed_at     (int  x,     int  y,    int *text,        float  factor);
 void  zprint_zoomed_at    (int  x,     int  y,    int *text,        float  factor);
 void  init_regions        (void);
-//void  views               (int  mode,  int *addr, int  mem,         int    stack,       int    gamepad,  int  card, int *bt, int btstart);
 void  views               (int  mode,  int *addr, int *flags,       int   *backtrace);
 bool  cartridge_connected ();
 void  draw_logo           (int  mode,  int *coffset);
