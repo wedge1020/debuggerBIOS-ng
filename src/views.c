@@ -72,6 +72,13 @@ void  views (int  modeflag, int *offset, int *viewflags, int *backtrace)
                 }
                 print_at (490, 18 + (index * 18), data); 
 
+                for (index         = 0;
+                     index        <  16;
+                     index         = index + 1)
+                {
+                    data[index]    = 0;         // clear the data array
+                }
+
                 ////////////////////////////////////////////////////////////////////
                 //
                 // display CART register value (backed up in memory)
@@ -85,13 +92,13 @@ void  views (int  modeflag, int *offset, int *viewflags, int *backtrace)
 
                     case FORMAT_INTEGER:
                         itoa (*(address+index), data, 10);
-                        //print_zoomed_at (540, 18 + (index * 18), data, 0.75);
+                        print_zoomed_at (540, 18 + (index * 18), data, 0.75);
                         print_at (540, 18 + (index * 18), data);
                         break;
 
                     case FORMAT_FLOAT:
                         ftoa ((float)*(address+index), data);
-                        //print_zoomed_at (540, 18 + (index * 18), data, 0.75);
+                        print_zoomed_at (540, 18 + (index * 18), data, 0.75);
                         print_at (540, 18 + (index * 18), data);
                         break;
                 }
