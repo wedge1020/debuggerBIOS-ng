@@ -431,6 +431,10 @@ void draw_logo (int  modeflag, int *coffset)
             print_zoomed_at (100, 32, "LEFT/RIGHT cycle formats (hex, int, float)", 0.50);
             break;
 
+        case MODE_RNG:
+            print_zoomed_at (100, 32, "LEFT/RIGHT adjusts RNG value by 1, L/R by 100", 0.50);
+            break;
+
         case MODE_STA:
             print_zoomed_at (100, 32, "LEFT/RIGHT adjust BP/SP view", 0.50);
             break;
