@@ -119,6 +119,25 @@ struct error_message
 
 ////////////////////////////////////////////////////////////////////////////////////////
 //
+// Pre-processor: IOPort aliases
+//
+#define  TIM_FRAMECOUNTER    0x002
+#define  TIM_CYCLECOUNTER    0x003
+#define  RNG_CURRENTVALUE    0x100
+#define  GPU_COMMAND         0x200
+
+////////////////////////////////////////////////////////////////////////////////////////
+//
+// Pre-processor: IOPort GPUCOMMAND aliases
+//
+#define  GPUCMD_CLEAR        0x10
+#define  GPUCMD_DRAW         0x11
+#define  GPUCMD_DRAWZOOM     0x12
+#define  GPUCMD_DRAWROTO     0x13
+#define  GPUCMD_DRAWROTOZOOM 0x14
+
+////////////////////////////////////////////////////////////////////////////////////////
+//
 // Pre-processor: memory map aliases
 //
 #define  ADDR_CART_REGISTERS 0x003FFBA0

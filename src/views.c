@@ -309,7 +309,7 @@ void  views (int  modeflag, int *offset, int *viewflags, int *backtrace)
             asm
             {
                 "PUSH R0"
-                "IN   R0,      TIM_FrameCounter"
+                "MOV  R0,      [0x003FFFDF]"
                 "MOV  {value}, R0"
                 "POP  R0"
             }
@@ -320,7 +320,7 @@ void  views (int  modeflag, int *offset, int *viewflags, int *backtrace)
             asm
             {
                 "PUSH R0"
-                "IN   R0,      TIM_CycleCounter"
+                "MOV  R0,      [0x003FFFE0]"
                 "MOV  {value}, R0"
                 "POP  R0"
             }

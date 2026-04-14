@@ -37,7 +37,7 @@ void main (void)
     int      incflag;
     int      decflag;
     int      clearflag;
-    int      waitflag;
+    int      emuflag;
     int      color;
     int      srcreg;
     int      dstreg;
@@ -83,9 +83,11 @@ void main (void)
     // 0x003FFBB0 top of debugger stack (1023 total words)
     //   . . .
     // 0x003FFFAF base of debugger/BIOS stack
-    // 0x003FFFB0 start of dynamic subroutine (48 total words)
+    // 0x003FFFB0 start of dynamic subroutine (46 total words)
     //   . . .
-    // 0x003FFFE0 end of dynamic subroutine
+    // 0x003FFFDE end of dynamic subroutine
+    // 0x003FFFDF CART TIM_FrameCounter value
+    // 0x003FFFE0 CART TIM_CycleCounter value
     // 0x003FFFE1 CART RNG_CurrentValue value
     // 0x003FFFE2 CART GPUCommand value
     // 0x003FFFE3 CART GPU_ClearColor value
@@ -275,7 +277,7 @@ void main (void)
     exitflag                             = FALSE;
     continueflag                         = CONTINUE_NONE;
     clearflag                            = FALSE;
-    waitflag                             = FALSE;
+    emuflag                              = FALSE;
     for (index                           = 0;
          index                          <  64;
          index                           = index + 1)
@@ -592,8 +594,8 @@ void main (void)
                     }
                     else
                     {
-						set_multiply_color (color_white);
-						/*
+                        set_multiply_color (color_white);
+                        /*
                         ////////////////////////////////////////////////////////////////
                         //
                         // calculate white  fade to black: as  we are dealing
@@ -1132,6 +1134,7 @@ void main (void)
         // never run in the custom routine, as branching would escape the
         // BIOS.
         //
+        emuflag                        = TRUE;
         switch ((instruction & 0xFC000000) >> 26)
         {
             ////////////////////////////////////////////////////////////////////////////
@@ -1148,6 +1151,19 @@ void main (void)
                     pos                = (instruction & 0x01E00000) >> 21;
                     code               = (int *) (ADDR_CART_REGISTERS + pos);
                     offset             = (int *) *code;
+                }
+
+                ////////////////////////////////////////////////////////////////////////
+                //
+                // update CART cyclecounter
+                //
+                asm
+                {
+                    "PUSH  R0"
+                    "MOV   R0,           [0x003FFFE0]"
+                    "IADD  R0,           1"
+                    "MOV   [0x003FFFE0], R0"
+                    "POP   R0"
                 }
                 continue;
 
@@ -1189,6 +1205,19 @@ void main (void)
                 }
                 backtrace[btrace]      = (int) offset;
                 btrace                 = btrace + 1;
+
+                ////////////////////////////////////////////////////////////////////////
+                //
+                // update CART cyclecounter
+                //
+                asm
+                {
+                    "PUSH  R0"
+                    "MOV   R0,           [0x003FFFE0]"
+                    "IADD  R0,           1"
+                    "MOV   [0x003FFFE0], R0"
+                    "POP   R0"
+                }
                 continue;
 
             ////////////////////////////////////////////////////////////////////////////
@@ -1215,18 +1244,27 @@ void main (void)
                 {
                     offset             = offset + 1;
                 }
+
+                ////////////////////////////////////////////////////////////////////////
+                //
+                // update CART cyclecounter
+                //
+                asm
+                {
+                    "PUSH  R0"
+                    "MOV   R0,           [0x003FFFE0]"
+                    "IADD  R0,           1"
+                    "MOV   [0x003FFFE0], R0"
+                    "POP   R0"
+                }
                 continue;
 
             case OPCODE_JT:
                 dstreg                 = (instruction & 0x01E00000) >> 21;
                 code                   = (int *) (ADDR_CART_REGISTERS + dstreg);
-                if (*code             == 0) // false
+                if (*code             == FALSE) // false
                 {
-                    offset             = offset + 1;
-                    if (immflag       >  0)
-                    {
-                        offset         = offset + 1;
-                    }
+                    break;
                 }
                 else // true (we're jumping)
                 {
@@ -1241,18 +1279,27 @@ void main (void)
                         offset         = (int *) *code;
                     }
                 }
+
+                ////////////////////////////////////////////////////////////////////////
+                //
+                // update CART cyclecounter
+                //
+                asm
+                {
+                    "PUSH  R0"
+                    "MOV   R0,           [0x003FFFE0]"
+                    "IADD  R0,           1"
+                    "MOV   [0x003FFFE0], R0"
+                    "POP   R0"
+                }
                 continue;
 
             case OPCODE_JF:
                 dstreg                 = (instruction & 0x01E00000) >> 21;
                 code                   = (int *) (ADDR_CART_REGISTERS + dstreg);
-                if (*code             != 0) // true (we're not jumping)
+                if (*code             != FALSE) // true (we're not jumping)
                 {
-                    offset             = offset + 1;
-                    if (immflag       >  0)
-                    {
-                        offset         = offset + 1;
-                    }
+                    break;
                 }
                 else // false (we're jumping)
                 {
@@ -1267,6 +1314,19 @@ void main (void)
                         offset         = (int *) *code;
                     }
                 }
+
+                ////////////////////////////////////////////////////////////////////////
+                //
+                // update CART cyclecounter
+                //
+                asm
+                {
+                    "PUSH  R0"
+                    "MOV   R0,           [0x003FFFE0]"
+                    "IADD  R0,           1"
+                    "MOV   [0x003FFFE0], R0"
+                    "POP   R0"
+                }
                 continue;
 
             ////////////////////////////////////////////////////////////////////////////
@@ -1277,7 +1337,32 @@ void main (void)
             // use with tracking drawing events
             //
             case OPCODE_WAIT:
-                waitflag               = TRUE;
+
+                ////////////////////////////////////////////////////////////////////////
+                //
+                // increment CART framecounter
+                //
+                asm
+                {
+                    "PUSH  R0"
+                    "MOV   R0,           [0x003FFFDF]"
+                    "IADD  R0,           1"
+                    "MOV   [0x003FFFDF], R0"
+                    "POP   R0"
+                }
+
+                ////////////////////////////////////////////////////////////////////////
+                //
+                // reset CART cyclecounter
+                //
+                asm
+                {
+                    "PUSH  R0"
+                    "MOV   R0,           [0x003FFFE0]"
+                    "MOV   R0,           0"
+                    "MOV   [0x003FFFE0], R0"
+                    "POP   R0"
+                }
                 break;
 
             ////////////////////////////////////////////////////////////////////////////
@@ -1287,27 +1372,63 @@ void main (void)
             // in memory
             //
             case OPCODE_IN:
-                ////////////////////////////////////////////////////////////////////////
-                //
-                // If getting a random number, emulate the IN instruction
-                // as we want to be able to exert control over it via the
-                // debugger (note that if RNG, it completely handles this
-                // instruction; if not, it lets it process)
-                //
-                if (port              == 0x100)    // RNG_CurrentValue
+
+                switch (port)
                 {
-                    address            = (int *) (ADDR_CART_REGISTERS + dstreg);
-                    asm
-                    {
-                        "PUSH  R0"
-                        "MOV   R0,           [0x003FFFE1]"
-                        "MOV   {value},      R0"
-                        "IN    R0,           RNG_CurrentValue"
-                        "MOV   [0x003FFFE1], R0"
-                        "POP   R0"
-                    }
-                    *address           = value;
-                    continue;
+                    ////////////////////////////////////////////////////////////////////
+                    //
+                    // For attempted accuracy, we manage our own FrameCounter
+                    // for the CART
+                    //
+                    case TIM_FRAMECOUNTER:
+                        address            = (int *) (ADDR_CART_REGISTERS + dstreg);
+                        asm
+                        {
+                            "PUSH  R0"
+                            "MOV   R0,           [0x003FFFDF]"
+                            "MOV   {value},      R0"
+                            "POP   R0"
+                        }
+                        *address           = value;
+                        break;
+
+                    ////////////////////////////////////////////////////////////////////
+                    //
+                    // For attempted accuracy, we manage our own CycleCounter
+                    // for the CART
+                    //
+                    case TIM_CYCLECOUNTER:
+                        address            = (int *) (ADDR_CART_REGISTERS + dstreg);
+                        asm
+                        {
+                            "PUSH  R0"
+                            "MOV   R0,           [0x003FFFE0]"
+                            "MOV   {value},      R0"
+                            "POP   R0"
+                        }
+                        *address           = value;
+                        break;
+
+                    ////////////////////////////////////////////////////////////////////
+                    //
+                    // If getting a random number, emulate the IN instruction
+                    // as we want to be able to exert control over it via the
+                    // debugger (note that if RNG, it completely handles this
+                    // instruction; if not, it lets it process)
+                    //
+                    case RNG_CURRENTVALUE:
+                        address            = (int *) (ADDR_CART_REGISTERS + dstreg);
+                        asm
+                        {
+                            "PUSH  R0"
+                            "MOV   R0,           [0x003FFFE1]"
+                            "MOV   {value},      R0"
+                            "IN    R0,           RNG_CurrentValue"
+                            "MOV   [0x003FFFE1], R0"
+                            "POP   R0"
+                        }
+                        *address           = value;
+                        break;
                 }
                 break;
 
@@ -1349,23 +1470,42 @@ void main (void)
                         }
                     }
 
-                    if (value         == 0x10)     // GPUCommand_ClearScreen
-                    {
-                        clearflag      = 1;
-
-                        asm
-                        {
-                            "PUSH R0"
-                            "MOV  R0,           0xDEADBEEF"
-                            "MOV  [0x003FFFE2], R0"
-                            "POP  R0"
-                        }
-                    }
+ //                   if (value         == 0x10)     // GPUCommand_ClearScreen
+   //                 {
+                        clearflag      = TRUE;
+     //               }
                 }
                 break;
 
             default:
+                emuflag                = FALSE;
                 break;
+        }
+
+        if (emuflag                   == TRUE)
+        {
+            emuflag                    = FALSE;
+            offset                     = offset + 1;
+            if (immflag               >  0)
+            {
+                offset                 = offset + 1;
+            }
+
+            ////////////////////////////////////////////////////////////////////////////
+            //
+            // update TIM_CycleCounter
+            //
+            asm
+            {
+                "PUSH  R0"
+                "MOV   R0,           0xDEADBEEF"
+                "MOV   [0x003FFFE2], R0"
+                "MOV   R0,           [0x003FFFE0]"
+                "IADD  R0,           1"
+                "MOV   [0x003FFFE0], R0"
+                "POP   R0"
+            }
+            continue;
         }
 
         ////////////////////////////////////////////////////////////////////////////////
@@ -1611,6 +1751,19 @@ void main (void)
         if (immflag                   >  0)
         {
             offset                     = offset + 1;
+        }
+
+        ////////////////////////////////////////////////////////////////////////////////
+        //
+        // increment the CART cycle counter
+        //
+        asm
+        {
+            "PUSH  R0"
+            "MOV   R0,           [0x003FFFE0]"
+            "IADD  R0,           1"
+            "MOV   [0x003FFFE0], R0"
+            "POP   R0"
         }
     }
 
