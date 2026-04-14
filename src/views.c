@@ -20,6 +20,19 @@ void  views (int  modeflag, int *offset, int *viewflags, int *backtrace)
 
     ////////////////////////////////////////////////////////////////////////////////////
     //
+    // preserve previous texture selection
+    //
+    int  previous_texture   = get_selected_texture ();
+    int  previous_region    = get_selected_region  ();
+
+    ////////////////////////////////////////////////////////////////////////////////////
+    //
+    // switch to the BIOS texture
+    //
+    select_texture (-1);
+
+    ////////////////////////////////////////////////////////////////////////////////////
+    //
     // Ensure the data array is cleared
     //
     for (index                     = 0;
@@ -1003,4 +1016,11 @@ void  views (int  modeflag, int *offset, int *viewflags, int *backtrace)
             }
             break;
     }
+    
+    ////////////////////////////////////////////////////////////////////////////////////
+    //
+    // restore previous texture and region selection
+    //
+    select_texture (previous_texture);
+    select_region  (previous_region);
 }

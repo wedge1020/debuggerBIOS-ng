@@ -1363,6 +1363,8 @@ void main (void)
                     "MOV   [0x003FFFE0], R0"
                     "POP   R0"
                 }
+
+                emuflag                    = FALSE;
                 break;
 
             ////////////////////////////////////////////////////////////////////////////
@@ -1429,6 +1431,10 @@ void main (void)
                         }
                         *address           = value;
                         break;
+
+                    default:
+                        emuflag            = FALSE;
+                        break;
                 }
                 break;
 
@@ -1442,38 +1448,17 @@ void main (void)
             // make  a quick  pit stop  here  to check  for the  specific
             // transaction, set the flag, then be back on our way.
             //
-//| `0x10` | `GPUCommand_ClearScreen`          | clear screen using current color    |
-//| `0x11` | `GPUCommand_DrawRegion`           | draw region: rotation off, zoom off |
-//| `0x12` | `GPUCommand_DrawRegionZoomed`     | draw region: rotation off, zoom on  |
-//| `0x13` | `GPUCommand_DrawRegionRotated`    | draw region: rotation on , zoom off |
-//| `0x14` | `GPUCommand_DrawRegionRotozoomed` | draw region: rotation on , zoom on  |
             case OPCODE_OUT:
-                if (port              == 0x200)    // GPU_Command
+                switch (port)
                 {
-                    if (immflag       >  0)        // data is immediate
-                    {
-                        value          = immediate;
-                    }
-                    else
-                    {
-                        asm
-                        {
-                            "PUSH R0"
-                            "PUSH R1"
-                            "MOV  R0,      0x003FFBA0"
-                            "MOV  R1,      {srcreg}"
-                            "IADD R0,      R1"
-                            "MOV  R0,      [R0]"
-                            "MOV  {value}, R0"
-                            "POP  R1"
-                            "POP  R0"
-                        }
-                    }
-
- //                   if (value         == 0x10)     // GPUCommand_ClearScreen
-   //                 {
+                    case GPU_COMMAND:
                         clearflag      = TRUE;
-     //               }
+                        emuflag        = FALSE;
+                        break;
+
+                    default:
+                        emuflag        = FALSE;
+                        break;
                 }
                 break;
 

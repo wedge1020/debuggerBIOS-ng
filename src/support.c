@@ -28,14 +28,18 @@ void  draw_message_screen (int *title, int *message)
 void  hexit  (int x, int y, int value)
 {
     int [9] data;
-    int     mask   = 0xF0000000;
-    int     shift  = 28;
-    int     index  = 0;
-    int     byte   = 0;
-    int     adjust = 10;
-    float   sx     = 0.0;
-    float   sy     = 0.0;
+    int     mask          = 0xF0000000;
+    int     shift         = 28;
+    int     index         = 0;
+    int     byte          = 0;
+    int     adjust        = 10;
+    float   sx            = 0.0;
+    float   sy            = 0.0;
 
+    int     prev_vtex     = get_selected_texture ();
+    int     prev_region   = get_selected_region  ();
+
+    select_texture (-1);
     get_drawing_scale (&sx, &sy);
     adjust         = (float) adjust * sx;
     if (sx        != 1.0)
@@ -54,13 +58,15 @@ void  hexit  (int x, int y, int value)
             byte   = byte + 0x7;
         byte       = byte + 0x30;
 
-        select_region (byte);
+        select_region  (byte);
         draw_region_at (x, y);
 
         x          = x + adjust;
         shift      = shift - 4;
         mask       = mask >> 4;
     }
+    select_texture (prev_vtex);
+    select_region  (prev_region);
 }
 
 void  hexit_zoomed (int x, int y, int value, float factor)
@@ -81,6 +87,11 @@ void portit  (int x, int y, int value)
     int     index  = 0;
     int     byte   = 0;
 
+    int previous_texture  = get_selected_texture ();
+    int previous_region   = get_selected_region ();
+
+    select_texture (-1);
+
     strcpy (data, "0x");
     print_at (x, y, data);
     x = x + 20;
@@ -99,6 +110,8 @@ void portit  (int x, int y, int value)
         shift      = shift - 4;
         mask       = mask >> 4;
     }
+    select_texture (previous_texture);
+    select_region  (previous_region);
 }
 
 void  print_hex_value (int  x, int  y, int *name, int  value)
@@ -267,7 +280,7 @@ void init_regions (void)
     //
     // clear the screen
     //
-    clear_screen (color_blue);
+    clear_screen (color_black);
 
     ////////////////////////////////////////////////////////////////////////////////////
     //
@@ -375,6 +388,13 @@ void print_zoomed_at (int  drawing_x, int  drawing_y, int *text, float  factor)
         
 void draw_logo (int  modeflag, int *coffset)
 {
+    ////////////////////////////////////////////////////////////////////////////////////
+    //
+    // preserve previous texture selection
+    //
+    int  previous_texture   = get_selected_texture ();
+    int  previous_region    = get_selected_region  ();
+
     set_blending_mode (blending_alpha);
     set_multiply_color (0xFFFFFFFF);
     clear_screen (color_black);
@@ -407,9 +427,19 @@ void draw_logo (int  modeflag, int *coffset)
 
     switch (modeflag)
     {
-        case MODE_RAM:
+        case MODE_REG:
+            print_zoomed_at (100, 32, "LEFT/RIGHT cycle formats (hex, int, float)", 0.50);
+            break;
+
         case MODE_STA:
+            print_zoomed_at (100, 32, "LEFT/RIGHT adjust BP/SP view", 0.50);
+            break;
+
         case MODE_BTR:
+            print_zoomed_at (100, 32, "LEFT/RIGHT adjust backtrace view by 16", 0.50);
+            break;
+
+        case MODE_RAM:
         case MODE_MEM:
             print_zoomed_at (100, 32, "LEFT/RIGHT adjust by 16, L/R adjust by 256", 0.50);
             break;
@@ -421,6 +451,13 @@ void draw_logo (int  modeflag, int *coffset)
     }
 
     set_multiply_color (color_white);
+    
+    ////////////////////////////////////////////////////////////////////////////////////
+    //
+    // restore previous texture and region selection
+    //
+    select_texture (previous_texture);
+    select_region  (previous_region);
 }
 
 void zprint_zoomed_at (int  drawing_x, int  drawing_y, int *text, float  factor)
