@@ -470,7 +470,7 @@ void main (void)
         history[count]                   = (int) offset;
         count                            = count + 1;
 
-		/*
+        /*
         if (cstepflag                   == TRUE)
         {
             framestop                    = 1;
@@ -1070,7 +1070,7 @@ void main (void)
                 //
                 asm
                 {
-					/*
+                    /*
                     "MOV R0,                  [0x003FFFE3]"
                     "OUT GPU_ClearColor,      R0"
                     "MOV R0,                  [0x003FFFE4]"
@@ -1454,7 +1454,22 @@ void main (void)
                 switch (port)
                 {
                     case GPU_COMMAND:
-                        clearflag      = TRUE;
+                        if (immflag   >  0)
+                        {
+                            value      = immediate;
+                        }
+                        else
+                        {
+                            address    = (int *) (ADDR_CART_REGISTERS + srcreg);
+                            value      = *address;
+                        }
+
+                        switch (value)
+                        {
+                            case GPUCMD_CLEAR:
+                                clearflag      = TRUE;
+                                break;
+                        }
                         emuflag        = FALSE;
                         break;
 
@@ -1575,7 +1590,7 @@ void main (void)
             "MOV [0x003FFFFF],        R15" // back up BIOS to RAM
             "MOV R0,                  _CUSTOM_RET"  // grab returning offset
             "MOV [0x003FFFEF],        R0"           // place it in memory
-			/*
+            /*
             "MOV R0,                  [0x003FFFE3]" // restore CART GPU ports
             "OUT GPU_ClearColor,      R0"
             "MOV R0,                  [0x003FFFE4]"
@@ -1596,7 +1611,7 @@ void main (void)
             "OUT GPU_DrawingScaleY,   R0"
             "MOV R0,                  [0x003FFFEC]"
             "OUT GPU_DrawingAngle,    R0"
-			*/
+            */
             "MOV R0,                  [0x003FFFED]" // grab CART gamepad
             "OUT INP_SelectedGamepad, R0"           // restore CART gamepad
             "MOV R0,                  [0x003FFBA0]" // restore CART register
@@ -1683,7 +1698,7 @@ void main (void)
             "MOV [0x003FFBAD], R13" // back up CART to RAM
             "MOV [0x003FFBAE], R14" // back up CART to RAM
             "MOV [0x003FFBAF], R15" // back up CART to RAM
-			/*
+            /*
             "IN  R0,           GPU_ClearColor" // back up CART GPU ports
             "MOV [0x003FFFE3], R0"
             "IN  R0,           GPU_MultiplyColor"
@@ -1704,7 +1719,7 @@ void main (void)
             "MOV [0x003FFFEB], R0"
             "IN  R0,           GPU_DrawingAngle"
             "MOV [0x003FFFEC], R0"
-			*/
+            */
             "IN  R0,           INP_SelectedGamepad" // back up current CART gamepad
             "MOV [0x003FFFED], R0"        // back up current CART gamepad
             "MOV R0,           [0x003FFFF0]" // restore BIOS register
