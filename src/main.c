@@ -470,10 +470,11 @@ void main (void)
         history[count]                   = (int) offset;
         count                            = count + 1;
 
+		/*
         if (cstepflag                   == TRUE)
         {
             framestop                    = 1;
-        }
+        }*/
 
         ////////////////////////////////////////////////////////////////////////////////
         //
