@@ -30,6 +30,7 @@ void main (void)
     int              stepflag;
     int              modeflag;
     int              codemode;
+    int              lastmode;
     int              yflag;
     int              continueflag;
     int              exitflag;
@@ -342,11 +343,14 @@ void main (void)
         // with  this, we  are still  in the  debugging monitor,  and can
         // break back to the single-step prompt by pressing START again.
         //
+        // Revert back to previously establish debugging mode.
+        //
         else if ((value                 <= BUTTON_NOT_PRESSED) &&
                  (continueflag          == CONTINUE_DETRIGGER))
         {
             continueflag                 = CONTINUE_NONE;
             framestop                    = -1;
+            codemode                     = lastmode;
         }
 
         ////////////////////////////////////////////////////////////////////////////////
@@ -1023,11 +1027,16 @@ void main (void)
             // in  the  debugging monitor,  and  can  break back  to  the
             // single-step prompt by pressing START again.
             //
+            // For performance: switch over to DEBUG_ASM for the duration
+            // of being in CONTINUE MODE.
+            //
             else if ((value           <= BUTTON_NOT_PRESSED) &&
                      (continueflag    == CONTINUE_ENTRIGGER))
             {
                 continueflag           = CONTINUE_ENABLED;
                 framestop              = 0;
+                lastmode               = codemode;
+                codemode               = DEBUG_ASM;
             }
 
             ////////////////////////////////////////////////////////////////////////////
