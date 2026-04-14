@@ -592,6 +592,8 @@ void main (void)
                     }
                     else
                     {
+						set_multiply_color (color_white);
+						/*
                         ////////////////////////////////////////////////////////////////
                         //
                         // calculate white  fade to black: as  we are dealing
@@ -605,7 +607,7 @@ void main (void)
                         color           |= (((value + (index * 24))) << 8);  // GREEN
                         color           |= (((value + (index * 24))) << 16); // BLUE
                         color           |= (((0xFF))                 << 24); // ALPHA
-                        set_multiply_color (color);
+                        set_multiply_color (color);*/
                     }
 
                     asm { "_DEF:" }

@@ -10,7 +10,7 @@ void  views (int  modeflag, int *offset, int *viewflags, int *backtrace)
     // Declare and initialize variables
     //
     float     fvalue               = 0.0;
-    int [16]  data;
+    int [33]  data;
     int      *address              = NULL;
     int      *stack                = NULL;
     int       index                = 0;
@@ -65,18 +65,20 @@ void  views (int  modeflag, int *offset, int *viewflags, int *backtrace)
                 if (index         <  10)
                 {
                     data[2]        = ':';
+					data[3]        = 0;
                 }
                 else
                 {
                     data[3]        = ':';
+					data[4]        = 0;
                 }
                 print_at (490, 18 + (index * 18), data); 
 
-                for (index         = 0;
-                     index        <  16;
-                     index         = index + 1)
+                for (pos           = 0;
+                     pos          <  16;
+                     pos           = pos + 1)
                 {
-                    data[index]    = 0;         // clear the data array
+                    data[pos]      = 0;         // clear the data array
                 }
 
                 ////////////////////////////////////////////////////////////////////
@@ -84,21 +86,23 @@ void  views (int  modeflag, int *offset, int *viewflags, int *backtrace)
                 // display CART register value (backed up in memory)
                 //
                 address            = (int *) ADDR_CART_REGISTERS;
+				value              = *(address+index);
                 switch (viewval)
                 {
                     case FORMAT_HEX:
-                        hexit_zoomed (540, 18 + (index * 18), *(address+index), 0.75);
+                        hexit_zoomed (540, 18 + (index * 18), value, 0.75);
                         break;
 
                     case FORMAT_INTEGER:
-                        itoa (*(address+index), data, 10);
-                        print_zoomed_at (540, 18 + (index * 18), data, 0.75);
+                        itoa (value, data, 10);
+                        //print_zoomed_at (540, 18 + (index * 18), data, 0.75);
                         print_at (540, 18 + (index * 18), data);
                         break;
 
                     case FORMAT_FLOAT:
-                        ftoa ((float)*(address+index), data);
-                        print_zoomed_at (540, 18 + (index * 18), data, 0.75);
+						fvalue     = (float) *(address+index);
+                        ftoa (fvalue, data);
+                        //print_zoomed_at (540, 18 + (index * 18), data, 0.75);
                         print_at (540, 18 + (index * 18), data);
                         break;
                 }
