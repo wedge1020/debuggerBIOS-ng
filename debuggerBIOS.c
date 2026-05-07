@@ -118,16 +118,6 @@
 #define  TIM_CYCLECOUNTER        0x003
 #define  RNG_CURRENTVALUE        0x100
 #define  GPU_COMMAND             0x200
-#define  GPU_CLEAR               0x202
-#define  GPU_MULTIPLY            0x203
-#define  GPU_BLEND               0x204
-#define  GPU_TEXTURE             0x205
-#define  GPU_REGION              0x206
-#define  GPU_DRAWX               0x207
-#define  GPU_DRAWY               0x208
-#define  GPU_SCALEX              0x209
-#define  GPU_SCALEY              0x20A
-#define  GPU_ANGLE               0x20B
 
 ////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -158,6 +148,9 @@
 //
 #define  BUTTON_NOT_PRESSED      -1
 #define  BUTTON_IS_PRESSED       1
+
+#define  DEBUG_ASM               0
+#define  DEBUG_C                 1
 
 ////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -352,6 +345,7 @@ void main (void)
     int              pos;         // another index variable
     int             *address;
     int             *memaddr;
+    int              num_offsets;
     int              value;
     int              framestop;
     int              stepflag;
@@ -372,8 +366,6 @@ void main (void)
     int [64]         backtrace;
     int              btrace;
     int [NUM_MODES]  vflag;
-    int              maxreg;
-    int              tmp;
 
     ////////////////////////////////////////////////////////////////////////////////////
     //
@@ -493,36 +485,6 @@ void main (void)
 
     ////////////////////////////////////////////////////////////////////////////////////
     //
-    // initialize CART port values
-    //
-    asm
-    {
-        "PUSH  R0"
-        "IN    R0,           GPU_ClearColor"
-        "MOV   [0x003FFFE3], R0"
-        "IN    R0,           GPU_MultiplyColor"
-        "MOV   [0x003FFFE4], R0"
-        "IN    R0,           GPU_ActiveBlending"
-        "MOV   [0x003FFFE5], R0"
-        "IN    R0,           GPU_SelectedTexture"
-        "MOV   [0x003FFFE6], R0"
-        "IN    R0,           GPU_SelectedRegion"
-        "MOV   [0x003FFFE7], R0"
-        "IN    R0,           GPU_DrawingPointX"
-        "MOV   [0x003FFFE8], R0"
-        "IN    R0,           GPU_DrawingPointY"
-        "MOV   [0x003FFFE9], R0"
-        "IN    R0,           GPU_DrawingScaleX"
-        "MOV   [0x003FFFEA], R0"
-        "IN    R0,           GPU_DrawingScaleY"
-        "MOV   [0x003FFFEB], R0"
-        "IN    R0,           GPU_DrawingAngle"
-        "MOV   [0x003FFFEC], R0"
-        "POP   R0"
-    }
-
-    ////////////////////////////////////////////////////////////////////////////////////
-    //
     // DEBUGGER: instead of directly passing control off to the CART ROM,
     // we will retain  control here in the BIOS,  providing the debugging
     // interface, allowing for finer instruction-by-instruction analysis.
@@ -552,7 +514,7 @@ void main (void)
     //
     count                                = 0;
     modeflag                             = MODE_NONE; // no content view by default
-    vflag[MODE_RAM]                      = ADDR_BIOS_REGISTERS;
+    vflag[MODE_RAM]                      = 0x003FFFF0;
     vflag[MODE_REG]                      = FORMAT_HEX;
     vflag[MODE_STA]                      = 9;
     vflag[MODE_MEM]                      = 0x30000000;
@@ -568,8 +530,6 @@ void main (void)
     }
     btrace                               = 0;
     vflag[MODE_BTR]                      = 0;
-    maxreg                               = 0;
-
     while (1)
     {
         ////////////////////////////////////////////////////////////////////////////////
@@ -607,11 +567,7 @@ void main (void)
         // issued  a  clearing  of  the  screen  (via  `out  GPU_Command,
         // GPUCommand_ClearScreen`)
         //
-        // Attempted performance tweak:  only traipse through the views() 
-        // function if a view is currently selected
-        //
-        if ((modeflag                   != MODE_NONE)        &&
-            (continueflag               == CONTINUE_ENABLED) &&
+        if ((continueflag               == CONTINUE_ENABLED) &&
             (clearflag                  == TRUE))
         {
             views (modeflag, offset, vflag, backtrace);
@@ -649,26 +605,18 @@ void main (void)
 
         ////////////////////////////////////////////////////////////////////////////////
         //
-        // continue mode: prevent single-step interaction
+        // debugger interactive interface (for single-step mode)
         //
+        framestop                        = -1;
+        stepflag                         = FALSE;
+        upflag                           = FALSE;
+        yflag                            = FALSE;
+        incflag                          = FALSE;
+        decflag                          = FALSE;
+        exitflag                         = FALSE;
         if (continueflag                == CONTINUE_ENABLED)
         {
             framestop                    = 0;
-        }
-
-        ////////////////////////////////////////////////////////////////////////////////
-        //
-        // single step: debugger interactive interface
-        //
-        else
-        {
-            framestop                    = -1;
-            stepflag                     = FALSE;
-            upflag                       = FALSE;
-            yflag                        = FALSE;
-            incflag                      = FALSE;
-            decflag                      = FALSE;
-            exitflag                     = FALSE;
         }
 
         ////////////////////////////////////////////////////////////////////////////////
@@ -717,11 +665,6 @@ void main (void)
                  index                  <  count;
                  index                   = index + 1)
             {
-                ////////////////////////////////////////////////////////////////////////
-                //
-                // obtain address and dereference the instruction that is
-                // to be decoded and displayed
-                //
                 address                  = (int *) history[index];
                 instruction              = *address;
 
@@ -753,7 +696,6 @@ void main (void)
                 {
                     immediate            = *(address+1);              // deref offset
                 }
-
                 else
                 {
                     immediate            = 0;                         // no immediate
@@ -763,7 +705,6 @@ void main (void)
                 {
                     set_multiply_color (color_yellow);
                 }
-
                 else
                 {
                     ////////////////////////////////////////////////////////////////////
@@ -805,9 +746,6 @@ void main (void)
                 {
                     set_multiply_color (color_white);
                 }
-
-                hexit_zoomed (0, (y + 36), maxreg, 0.75);
-                hexit_zoomed (100, (y + 36), tmp, 0.75);
 
                 y                        = y + 18;
                 if (immflag             >  0)
@@ -858,7 +796,7 @@ void main (void)
                     vflag[MODE_RAM]         = vflag[MODE_RAM] - 16;
                     if (vflag[MODE_RAM] <  0x00000000)
                     {
-                        vflag[MODE_RAM]  = ADDR_BIOS_REGISTERS;
+                        vflag[MODE_RAM]  = 0x003FFFF0;
                     }
                 }
 
@@ -941,12 +879,10 @@ void main (void)
                         vflag[MODE_RAM]  = 0x003FFF00;
                     }
                 }
-
                 else if (modeflag       == MODE_REG)
                 {
                     vflag[MODE_REG]      = FORMAT_HEX;
                 }
-
                 else if (modeflag       == MODE_STA)
                 {
                     vflag[MODE_STA]      = vflag[MODE_STA] - 3;
@@ -955,17 +891,14 @@ void main (void)
                         vflag[MODE_STA]  = 1;
                     }
                 }
-
                 else if (modeflag       == MODE_BTR)
                 {
                     vflag[MODE_BTR]      = 0;
                 }
-
                 else if (modeflag       == MODE_INP)
                 {
                     vflag[MODE_INP]      = 0;
                 }
-
                 else if (modeflag       == MODE_MEM)
                 {
                     vflag[MODE_MEM]      = vflag[MODE_MEM] - 256;
@@ -974,7 +907,6 @@ void main (void)
                         vflag[MODE_MEM]  = 0x3003FF00;
                     }
                 }
-
                 else if (modeflag       == MODE_RNG)
                 {
                     memaddr              = (int *) ADDR_PORT_RNGVALUE;
@@ -1004,17 +936,15 @@ void main (void)
                 if (modeflag            == MODE_RAM)
                 {
                     vflag[MODE_RAM]      = vflag[MODE_RAM] + 16;
-                    if (vflag[MODE_RAM] >  ADDR_BIOS_REGISTERS)
+                    if (vflag[MODE_RAM] >  0x003FFFF0)
                     {
                         vflag[MODE_RAM]  = 0x00000000;
                     }
                 }
-
                 else if (modeflag       == MODE_REG)
                 {
                     vflag[MODE_REG]      = (vflag[MODE_REG] + 1) % NUM_FORMATS;
                 }
-
                 else if (modeflag       == MODE_STA)
                 {
                     vflag[MODE_STA]      = vflag[MODE_STA] + 1;
@@ -1023,7 +953,6 @@ void main (void)
                         vflag[MODE_STA]  = 18;
                     }
                 }
-
                 else if (modeflag       == MODE_BTR)
                 {
                     vflag[MODE_BTR]      = vflag[MODE_BTR]  + 16;
@@ -1032,12 +961,10 @@ void main (void)
                         vflag[MODE_BTR]  = 0;
                     }
                 }
-
                 else if (modeflag       == MODE_INP)
                 {
                     vflag[MODE_INP]      = (vflag[MODE_INP] + 1) % 4;
                 }
-
                 else if (modeflag       == MODE_MEM)
                 {
                     vflag[MODE_MEM]      = vflag[MODE_MEM] + 16;
@@ -1046,7 +973,6 @@ void main (void)
                         vflag[MODE_MEM]  = 0x30000000;
                     }
                 }
-
                 else if (modeflag       == MODE_RNG)
                 {
                     memaddr              = (int *) ADDR_PORT_RNGVALUE;
@@ -1081,12 +1007,10 @@ void main (void)
                         vflag[MODE_RAM]  = 0x00000000;
                     }
                 }
-
                 else if (modeflag       == MODE_REG)
                 {
                     vflag[MODE_REG]      = NUM_FORMATS - 1;
                 }
-
                 else if (modeflag       == MODE_STA)
                 {
                     vflag[MODE_STA]      = vflag[MODE_STA] + 3;
@@ -1095,17 +1019,14 @@ void main (void)
                         vflag[MODE_STA]  = 18;
                     }
                 }
-
                 else if (modeflag       == MODE_BTR)
                 {
                     vflag[MODE_BTR]      = 48;
                 }
-
                 else if (modeflag       == MODE_INP)
                 {
                     vflag[MODE_INP]      = 3;
                 }
-
                 else if (modeflag       == MODE_MEM)
                 {
                     vflag[MODE_MEM]      = vflag[MODE_MEM] + 256;
@@ -1114,7 +1035,6 @@ void main (void)
                         vflag[MODE_MEM]  = 0x30000000;
                     }
                 }
-
                 else if (modeflag       == MODE_RNG)
                 {
                     address              = (int *) ADDR_PORT_RNGVALUE;
@@ -1174,6 +1094,9 @@ void main (void)
             // single-step  prompt). Note  that with  this, we  are still
             // in  the  debugging monitor,  and  can  break back  to  the
             // single-step prompt by pressing START again.
+            //
+            // For performance: switch over to DEBUG_ASM for the duration
+            // of being in CONTINUE MODE.
             //
             else if ((value             <= BUTTON_NOT_PRESSED) &&
                      (continueflag      == CONTINUE_ENTRIGGER))
@@ -1252,7 +1175,7 @@ void main (void)
                     "OUT GPU_DrawingScaleY,   R0"
                     "MOV R0,                  [0x003FFFEC]"
                     "OUT GPU_DrawingAngle,    R0"
-                    "MOV R0,                  [0x003FFFED]" */
+                    "MOV R0,                  [0x003FFFED]"*/
                     "OUT INP_SelectedGamepad, R0"
                     "MOV R0,                  [0x003FFBA0]" // restore CART register
                     "MOV R1,                  [0x003FFBA1]" // restore CART register
@@ -1277,14 +1200,9 @@ void main (void)
             end_frame ();
         } // end of single step loop
 
-        ////////////////////////////////////////////////////////////////////////////////
-        //
-        // refresh instruction component variables
-        //
         instruction                      = *offset;
         immflag                          = instruction  & 0x02000000;
-        dstreg                           = (instruction & 0x01E00000) >> 21;
-        srcreg                           = (instruction & 0x001E0000) >> 17;
+        srcreg                           = (instruction & 0x01E00000) >> 21;
         port                             = instruction  & 0x00003FFF;
         if (immflag                     >  0)
         {
@@ -1302,7 +1220,7 @@ void main (void)
         // never run in the custom routine, as branching would escape the
         // BIOS.
         //
-        emuflag                          = FALSE;
+        emuflag                          = TRUE;
         switch ((instruction & 0xFC000000) >> 26)
         {
             ////////////////////////////////////////////////////////////////////////////
@@ -1327,12 +1245,6 @@ void main (void)
                 //
                 memaddr                  = (int *) ADDR_PORT_TIMCYCLE;
                 *memaddr                 = *memaddr + 1;
-                emuflag                  = TRUE;
-
-                ////////////////////////////////////////////////////////////////////////
-                //
-                // instruction processing done: proceed to next instruction
-                //
                 continue;
 
             ////////////////////////////////////////////////////////////////////////////
@@ -1345,7 +1257,6 @@ void main (void)
             // Take note of the exceptional pointer scheme utilized
             //
             case OPCODE_CALL:
-
                 ////////////////////////////////////////////////////////////////////////
                 //
                 // CART SP, stored in RAM
@@ -1381,12 +1292,6 @@ void main (void)
                 //
                 memaddr                  = (int *) ADDR_PORT_TIMCYCLE;
                 *memaddr                 = *memaddr + 1;
-                emuflag                  = TRUE;
-
-                ////////////////////////////////////////////////////////////////////////
-                //
-                // instruction processing done: proceed to next instruction
-                //
                 continue;
 
             ////////////////////////////////////////////////////////////////////////////
@@ -1397,7 +1302,6 @@ void main (void)
             // needing to be done.
             //
             case OPCODE_RET:
-
                 ////////////////////////////////////////////////////////////////////////
                 //
                 // CART SP, stored in RAM
@@ -1421,16 +1325,10 @@ void main (void)
                 //
                 memaddr                  = (int *) ADDR_PORT_TIMCYCLE;
                 *memaddr                 = *memaddr + 1;
-                emuflag                  = TRUE;
-
-                ////////////////////////////////////////////////////////////////////////
-                //
-                // instruction processing done: proceed to next instruction
-                //
                 continue;
 
             case OPCODE_JT:
-                emuflag                  = TRUE;
+                dstreg                   = (instruction & 0x01E00000) >> 21;
                 code                     = (int *) (ADDR_CART_REGISTERS + dstreg);
                 if (*code               == FALSE) // false
                 {
@@ -1444,6 +1342,7 @@ void main (void)
                     }
                     else
                     {
+                        srcreg           = (instruction & 0x01E00000) >> 21;
                         code             = (int *) (ADDR_CART_REGISTERS + srcreg);
                         offset           = (int *) *code;
                     }
@@ -1455,15 +1354,10 @@ void main (void)
                 //
                 memaddr                  = (int *) ADDR_PORT_TIMCYCLE;
                 *memaddr                 = *memaddr + 1;
-
-                ////////////////////////////////////////////////////////////////////////
-                //
-                // instruction processing done: proceed to next instruction
-                //
                 continue;
 
             case OPCODE_JF:
-                emuflag                  = TRUE;
+                dstreg                   = (instruction & 0x01E00000) >> 21;
                 code                     = (int *) (ADDR_CART_REGISTERS + dstreg);
                 if (*code               != FALSE) // true (we're not jumping)
                 {
@@ -1477,6 +1371,7 @@ void main (void)
                     }
                     else
                     {
+                        srcreg           = (instruction & 0x01E00000) >> 21;
                         code             = (int *) (ADDR_CART_REGISTERS + srcreg);
                         offset           = (int *) *code;
                     }
@@ -1488,11 +1383,6 @@ void main (void)
                 //
                 memaddr                  = (int *) ADDR_PORT_TIMCYCLE;
                 *memaddr                 = *memaddr + 1;
-
-                ////////////////////////////////////////////////////////////////////////
-                //
-                // instruction processing done: proceed to next instruction
-                //
                 continue;
 
             ////////////////////////////////////////////////////////////////////////////
@@ -1529,7 +1419,6 @@ void main (void)
             //
             case OPCODE_IN:
 
-                emuflag                  = TRUE;
                 switch (port)
                 {
                     ////////////////////////////////////////////////////////////////////
@@ -1582,151 +1471,31 @@ void main (void)
 
             ////////////////////////////////////////////////////////////////////////////
             //
+            // OUT: be on  the lookout for clear  screen instances, which
+            // will be  tied to  `clearflag` and  the continue  mode view
+            // rendering.
+            //
             // The OUT instruction  will be performed as  normal, we just
             // make  a quick  pit stop  here  to check  for the  specific
             // transaction, set the flag, then be back on our way.
             //
             case OPCODE_OUT:
-
-                ////////////////////////////////////////////////////////////////////////
-                //
-                // obtain the value being transacted by the OUT, regardless
-                // of form
-                //
-                if (immflag             >  0)
-                {
-                    value                = immediate;
-                }
-                else
-                {
-                    address              = (int *) (ADDR_CART_REGISTERS + srcreg);
-                    value                = *address;
-                }
-
-                emuflag                  = TRUE;
                 switch (port)
                 {
                     case GPU_COMMAND:
+                        if (immflag     >  0)
+                        {
+                            value        = immediate;
+                        }
+                        else
+                        {
+                            address      = (int *) (ADDR_CART_REGISTERS + srcreg);
+                            value        = *address;
+                        }
 
-                        ////////////////////////////////////////////////////////////////
-                        //
-                        // OUT: be on  the lookout for clear  screen instances, which
-                        // will be  tied to  `clearflag` and  the continue  mode view
-                        // rendering.
-                        //
                         if (value       == GPUCMD_CLEAR)
                         {
                             clearflag    = TRUE;
-                        }
-                        emuflag          = FALSE;
-                        break;
-
-                    case GPU_CLEAR:
-                        asm
-                        {
-                            "PUSH  R0"
-                            "MOV   R0,           {value}"
-                            "MOV   [0x003FFFE3], R0"
-                            "POP   R0"
-                        }
-                        emuflag          = FALSE;
-                        break;
-
-                    case GPU_MULTIPLY:
-                        asm
-                        {
-                            "PUSH  R0"
-                            "MOV   R0,           {value}"
-                            "MOV   [0x003FFFE4], R0"
-                            "POP   R0"
-                        }
-                        emuflag          = FALSE;
-                        break;
-
-                    case GPU_BLEND:
-                        asm
-                        {
-                            "PUSH  R0"
-                            "MOV   R0,           {value}"
-                            "MOV   [0x003FFFE5], R0"
-                            "POP   R0"
-                        }
-                        emuflag          = FALSE;
-                        break;
-
-                    case GPU_TEXTURE:
-                        asm
-                        {
-                            "PUSH  R0"
-                            "MOV   R0,           {value}"
-                            "MOV   [0x003FFFE6], R0"
-                            "POP   R0"
-                        }
-                        emuflag          = FALSE;
-                        break;
-
-                    case GPU_REGION:
-                        asm
-                        {
-                            "PUSH  R0"
-                            "MOV   R0,           {value}"
-                            "MOV   [0x003FFFE7], R0"
-                            "POP   R0"
-                        }
-                        emuflag          = FALSE;
-                        break;
-
-                    case GPU_DRAWX:
-                        asm
-                        {
-                            "PUSH  R0"
-                            "MOV   R0,           {value}"
-                            "MOV   [0x003FFFE8], R0"
-                            "POP   R0"
-                        }
-                        emuflag          = FALSE;
-                        break;
-
-                    case GPU_DRAWY:
-                        asm
-                        {
-                            "PUSH  R0"
-                            "MOV   R0,           {value}"
-                            "MOV   [0x003FFFE9], R0"
-                            "POP   R0"
-                        }
-                        emuflag          = FALSE;
-                        break;
-
-                    case GPU_SCALEX:
-                        asm
-                        {
-                            "PUSH  R0"
-                            "MOV   R0,           {value}"
-                            "MOV   [0x003FFFEA], R0"
-                            "POP   R0"
-                        }
-                        emuflag          = FALSE;
-                        break;
-
-                    case GPU_SCALEY:
-                        asm
-                        {
-                            "PUSH  R0"
-                            "MOV   R0,           {value}"
-                            "MOV   [0x003FFFEB], R0"
-                            "POP   R0"
-                        }
-                        emuflag          = FALSE;
-                        break;
-
-                    case GPU_ANGLE:
-                        asm
-                        {
-                            "PUSH  R0"
-                            "MOV   R0,           {value}"
-                            "MOV   [0x003FFFEC], R0"
-                            "POP   R0"
                         }
                         emuflag          = FALSE;
                         break;
@@ -1742,10 +1511,6 @@ void main (void)
                 break;
         }
 
-        ////////////////////////////////////////////////////////////////////////////////
-        //
-        // if instruction emulation is triggered, do the deed
-        //
         if (emuflag                     == TRUE)
         {
             emuflag                      = FALSE;
@@ -1761,12 +1526,6 @@ void main (void)
             //
             memaddr                      = (int *) ADDR_PORT_TIMCYCLE;
             *memaddr                     = *memaddr + 1;
-
-            ////////////////////////////////////////////////////////////////////////////
-            //
-            // skip the rest of this loop and proceed to the next
-            // instruction
-            //
             continue;
         }
 
@@ -1828,113 +1587,68 @@ void main (void)
         //
         // SWITCHING CONTEXTS: BIOS -> CART
         //
-        // pre-custom routine, back up BIOS environment
+        // pre-custom routine, back up BIOS environment and load CART environment
         //
         asm
         {
-            "MOV  [0x003FFFF0],        R0"  // back up BIOS to RAM
-            "MOV  [0x003FFFF1],        R1"  // back up BIOS to RAM
-            "MOV  [0x003FFFF2],        R2"  // back up BIOS to RAM
-            "MOV  [0x003FFFF3],        R3"  // back up BIOS to RAM
-            "MOV  [0x003FFFF4],        R4"  // back up BIOS to RAM
-            "MOV  [0x003FFFF5],        R5"  // back up BIOS to RAM
-            "MOV  [0x003FFFF6],        R6"  // back up BIOS to RAM
-            "MOV  [0x003FFFF7],        R7"  // back up BIOS to RAM
-            "MOV  [0x003FFFF8],        R8"  // back up BIOS to RAM
-            "MOV  [0x003FFFF9],        R9"  // back up BIOS to RAM
-            "MOV  [0x003FFFFA],        R10" // back up BIOS to RAM
-            "MOV  [0x003FFFFB],        R11" // back up BIOS to RAM
-            "MOV  [0x003FFFFC],        R12" // back up BIOS to RAM
-            "MOV  [0x003FFFFD],        R13" // back up BIOS to RAM
-            "MOV  [0x003FFFFE],        R14" // back up BIOS to RAM
-            "MOV  [0x003FFFFF],        R15" // back up BIOS to RAM
-            "MOV  R0,                  _CUSTOM_RET"  // grab returning offset
-            "MOV  [0x003FFFEF],        R0"           // place it in memory
-        }
-
-        ////////////////////////////////////////////////////////////////////////////////
-        //
-        // Restore CART GPU IOPorts and CART gamepad
-        //
-        asm
-        {
-            "MOV  R0,                  [0x003FFFE3]" // restore CART GPU ports
-            "OUT  GPU_ClearColor,      R0"
-            "MOV  R0,                  [0x003FFFE4]"
-            "OUT  GPU_MultiplyColor,   R0"
-            "MOV  R0,                  [0x003FFFE5]"
-            "OUT  GPU_ActiveBlending,  R0"
-            "MOV  R0,                  [0x003FFFE6]"
-            "OUT  GPU_SelectedTexture, R0"
-            "MOV  R0,                  [0x003FFFE7]"
-            "OUT  GPU_SelectedRegion,  R0"
-            "MOV  R0,                  [0x003FFFE8]"
-            "OUT  GPU_DrawingPointX,   R0"
-            "MOV  R0,                  [0x003FFFE9]"
-            "OUT  GPU_DrawingPointY,   R0"
-            "MOV  R0,                  [0x003FFFEA]"
-            "OUT  GPU_DrawingScaleX,   R0"
-            "MOV  R0,                  [0x003FFFEB]"
-            "OUT  GPU_DrawingScaleY,   R0"
-            "MOV  R0,                  [0x003FFFEC]"
-            "OUT  GPU_DrawingAngle,    R0"
-            "MOV  R0,                  [0x003FFFED]"  // grab CART gamepad
-            "OUT  INP_SelectedGamepad, R0"            // restore CART gamepad
-        }
-
-        ////////////////////////////////////////////////////////////////////////////////
-        //
-        // check and update maxreg, as needed
-        //
-        if ((dstreg                     >  maxreg) &&
-            (dstreg                     <  14))
-        {
-            maxreg                       = dstreg;
-        }
-        else if ((srcreg                >  maxreg) &&
-                 (srcreg                <  14))
-        {
-            maxreg                       = srcreg;
-        }
-
-        ////////////////////////////////////////////////////////////////////////////////
-        //
-        // Optimally restore CART registers based on usage (always restore
-        // the R0, BP, and SP registers)
-        //
-        // In another attempt at optimization,  here we are obtaining  the
-        // offset of where the CART R0 register is being restored.  Notice
-        // the order of restorations for R0-R13 is intentionally reversed.
-        // Calculating a new offset based on the doubling  of maxreg  then
-        // subtracting that from the R0 restoration,  we will  selectively
-        // process only the registers used by the CART. Best case,  if the
-        // compiler tends to only use R0, R1, and R2,  we will save on the
-        // use of many of these MOVs each instruction.
-        //
-        asm
-        {
-            "MOV  R0,                  {maxreg}"      // only transact used registers
-            "IADD R0,                  R0"            // double the value (immediate)
-            "MOV  R1,                  _LOAD_CART_R0" // obtain offset
-            "ISUB R1,                  R0"            // calculate offset
-            "JMP  R1"                                 // jump to max register offset
-            "MOV  R13,                 [0x003FFBAD]"  // restore CART register
-            "MOV  R12,                 [0x003FFBAC]"  // restore CART register
-            "MOV  R11,                 [0x003FFBAB]"  // restore CART register
-            "MOV  R10,                 [0x003FFBAA]"  // restore CART register
-            "MOV  R9,                  [0x003FFBA9]"  // restore CART register
-            "MOV  R8,                  [0x003FFBA8]"  // restore CART register
-            "MOV  R7,                  [0x003FFBA7]"  // restore CART register
-            "MOV  R6,                  [0x003FFBA6]"  // restore CART register
-            "MOV  R5,                  [0x003FFBA5]"  // restore CART register
-            "MOV  R4,                  [0x003FFBA4]"  // restore CART register
-            "MOV  R3,                  [0x003FFBA3]"  // restore CART register
-            "MOV  R2,                  [0x003FFBA2]"  // restore CART register
-            "MOV  R1,                  [0x003FFBA1]"  // restore CART register
-            "_LOAD_CART_R0:"
-            "MOV  R0,                  [0x003FFBA0]"  // restore CART register
-            "MOV  R14,                 [0x003FFBAE]"  // restore CART stack BP
-            "MOV  R15,                 [0x003FFBAF]"  // restore CART stack SP
+            "MOV [0x003FFFF0],        R0"  // back up BIOS to RAM
+            "MOV [0x003FFFF1],        R1"  // back up BIOS to RAM
+            "MOV [0x003FFFF2],        R2"  // back up BIOS to RAM
+            "MOV [0x003FFFF3],        R3"  // back up BIOS to RAM
+            "MOV [0x003FFFF4],        R4"  // back up BIOS to RAM
+            "MOV [0x003FFFF5],        R5"  // back up BIOS to RAM
+            "MOV [0x003FFFF6],        R6"  // back up BIOS to RAM
+            "MOV [0x003FFFF7],        R7"  // back up BIOS to RAM
+            "MOV [0x003FFFF8],        R8"  // back up BIOS to RAM
+            "MOV [0x003FFFF9],        R9"  // back up BIOS to RAM
+            "MOV [0x003FFFFA],        R10" // back up BIOS to RAM
+            "MOV [0x003FFFFB],        R11" // back up BIOS to RAM
+            "MOV [0x003FFFFC],        R12" // back up BIOS to RAM
+            "MOV [0x003FFFFD],        R13" // back up BIOS to RAM
+            "MOV [0x003FFFFE],        R14" // back up BIOS to RAM
+            "MOV [0x003FFFFF],        R15" // back up BIOS to RAM
+            "MOV R0,                  _CUSTOM_RET"  // grab returning offset
+            "MOV [0x003FFFEF],        R0"           // place it in memory
+            /*
+            "MOV R0,                  [0x003FFFE3]" // restore CART GPU ports
+            "OUT GPU_ClearColor,      R0"
+            "MOV R0,                  [0x003FFFE4]"
+            "OUT GPU_MultiplyColor,   R0"
+            "MOV R0,                  [0x003FFFE5]"
+            "OUT GPU_ActiveBlending,  R0"
+            "MOV R0,                  [0x003FFFE6]"
+            "OUT GPU_SelectedTexture, R0"
+            "MOV R0,                  [0x003FFFE7]"
+            "OUT GPU_SelectedRegion,  R0"
+            "MOV R0,                  [0x003FFFE8]"
+            "OUT GPU_DrawingPointX,   R0"
+            "MOV R0,                  [0x003FFFE9]"
+            "OUT GPU_DrawingPointY,   R0"
+            "MOV R0,                  [0x003FFFEA]"
+            "OUT GPU_DrawingScaleX,   R0"
+            "MOV R0,                  [0x003FFFEB]"
+            "OUT GPU_DrawingScaleY,   R0"
+            "MOV R0,                  [0x003FFFEC]"
+            "OUT GPU_DrawingAngle,    R0"
+            */
+            "MOV R0,                  [0x003FFFED]" // grab CART gamepad
+            "OUT INP_SelectedGamepad, R0"           // restore CART gamepad
+            "MOV R0,                  [0x003FFBA0]" // restore CART register
+            "MOV R1,                  [0x003FFBA1]" // restore CART register
+            "MOV R2,                  [0x003FFBA2]" // restore CART register
+            "MOV R3,                  [0x003FFBA3]" // restore CART register
+            "MOV R4,                  [0x003FFBA4]" // restore CART register
+            "MOV R5,                  [0x003FFBA5]" // restore CART register
+            "MOV R6,                  [0x003FFBA6]" // restore CART register
+            "MOV R7,                  [0x003FFBA7]" // restore CART register
+            "MOV R8,                  [0x003FFBA8]" // restore CART register
+            "MOV R9,                  [0x003FFBA9]" // restore CART register
+            "MOV R10,                 [0x003FFBAA]" // restore CART register
+            "MOV R11,                 [0x003FFBAB]" // restore CART register
+            "MOV R12,                 [0x003FFBAC]" // restore CART register
+            "MOV R13,                 [0x003FFBAD]" // restore CART register
+            "MOV R14,                 [0x003FFBAE]" // restore CART stack BP
+            "MOV R15,                 [0x003FFBAF]" // restore CART stack SP
         }
 
         ////////////////////////////////////////////////////////////////////////////////
@@ -1991,34 +1705,24 @@ void main (void)
         asm
         {
             "_CUSTOM_RET:"
-            "MOV [0x003FFBA0], R0"            // back up CART to RAM
-            //"POP R10"
-            /* */
-            "MOV  R10,         {maxreg}"      // only transact used registers
-            "IADD R10,         R10"           // double the value (immediate)
-            "MOV  R0,          _SAVE_CART_R0" // obtain offset
-            "MOV  {tmp},       R0"
-            "ISUB R0,          R10"           // calculate offset
-            "POP  R10"                        // R10 back to last legit CART state
-            //"JMP  R0"                         // jump to restore of max register
-            /* */
-            "MOV [0x003FFBAD], R13" // back up CART to RAM
-            "MOV [0x003FFBAC], R12" // back up CART to RAM
-            "MOV [0x003FFBAB], R11" // back up CART to RAM
-            "MOV [0x003FFBAA], R10" // back up CART to RAM
-            "MOV [0x003FFBA9], R9"  // back up CART to RAM
-            "MOV [0x003FFBA8], R8"  // back up CART to RAM
-            "MOV [0x003FFBA7], R7"  // back up CART to RAM
-            "MOV [0x003FFBA6], R6"  // back up CART to RAM
-            "MOV [0x003FFBA5], R5"  // back up CART to RAM
-            "MOV [0x003FFBA4], R4"  // back up CART to RAM
-            "MOV [0x003FFBA3], R3"  // back up CART to RAM
-            "MOV [0x003FFBA2], R2"  // back up CART to RAM
+            "POP R10"               // R10 back to last legit CART state
+            "MOV [0x003FFBA0], R0"  // back up CART to RAM
             "MOV [0x003FFBA1], R1"  // back up CART to RAM
-            "_SAVE_CART_R0:"
-            "MOV [0x003FFBA1], R1"  // dummy back up CART to RAM
+            "MOV [0x003FFBA2], R2"  // back up CART to RAM
+            "MOV [0x003FFBA3], R3"  // back up CART to RAM
+            "MOV [0x003FFBA4], R4"  // back up CART to RAM
+            "MOV [0x003FFBA5], R5"  // back up CART to RAM
+            "MOV [0x003FFBA6], R6"  // back up CART to RAM
+            "MOV [0x003FFBA7], R7"  // back up CART to RAM
+            "MOV [0x003FFBA8], R8"  // back up CART to RAM
+            "MOV [0x003FFBA9], R9"  // back up CART to RAM
+            "MOV [0x003FFBAA], R10" // back up CART to RAM
+            "MOV [0x003FFBAB], R11" // back up CART to RAM
+            "MOV [0x003FFBAC], R12" // back up CART to RAM
+            "MOV [0x003FFBAD], R13" // back up CART to RAM
             "MOV [0x003FFBAE], R14" // back up CART to RAM
             "MOV [0x003FFBAF], R15" // back up CART to RAM
+            /*
             "IN  R0,           GPU_ClearColor" // back up CART GPU ports
             "MOV [0x003FFFE3], R0"
             "IN  R0,           GPU_MultiplyColor"
@@ -2039,8 +1743,9 @@ void main (void)
             "MOV [0x003FFFEB], R0"
             "IN  R0,           GPU_DrawingAngle"
             "MOV [0x003FFFEC], R0"
+            */
             "IN  R0,           INP_SelectedGamepad" // back up current CART gamepad
-            "MOV [0x003FFFED], R0"           // back up current CART gamepad
+            "MOV [0x003FFFED], R0"        // back up current CART gamepad
             "MOV R0,           [0x003FFFF0]" // restore BIOS register
             "MOV R1,           [0x003FFFF1]" // restore BIOS register
             "MOV R2,           [0x003FFFF2]" // restore BIOS register
@@ -2155,14 +1860,14 @@ void  hexit  (int x, int y, int value)
         shift             = shift - 4;
         mask              = mask >> 4;
     }
-    select_texture (prev_vtex);
-    select_region  (prev_region);
+    select_texture     (prev_vtex);
+    select_region      (prev_region);
 }
 
 void  hexit_zoomed (int x, int y, int value, float factor)
 {
     set_drawing_scale (factor, (factor * 2));
-    hexit (x, y, value);
+    hexit             (x, y, value);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -2414,13 +2119,13 @@ void print_zoomed_at (int  drawing_x, int  drawing_y, int *text, float  factor)
     // select the BIOS texture
     //
     select_texture (-1);
-
+    
     ////////////////////////////////////////////////////////////////////////////////////
     //
     // begin drawing characters at the given position
     //
     int  initial_drawing_x  = drawing_x;
-
+    
     ////////////////////////////////////////////////////////////////////////////////////
     //
     // until we encounter the null terminator at the end of the string...
@@ -2434,7 +2139,7 @@ void print_zoomed_at (int  drawing_x, int  drawing_y, int *text, float  factor)
         select_region         (*text);
         set_drawing_scale     (factor,    1.0);
         draw_region_zoomed_at (drawing_x, drawing_y);
-
+        
         ////////////////////////////////////////////////////////////////////////////////
         //
         // advance in x, influenced by any scaling factor
@@ -2447,7 +2152,7 @@ void print_zoomed_at (int  drawing_x, int  drawing_y, int *text, float  factor)
         {
             drawing_x      += (bios_character_width * factor) + 1;
         }
-
+        
         ////////////////////////////////////////////////////////////////////////////////
         //
         // execute line breaks
@@ -2461,14 +2166,14 @@ void print_zoomed_at (int  drawing_x, int  drawing_y, int *text, float  factor)
             drawing_x       = initial_drawing_x;
             drawing_y      += bios_character_height;
         }
-
+        
         ////////////////////////////////////////////////////////////////////////////////
         //
         // advance to next character
         //
         ++text;
     }
-
+    
     ////////////////////////////////////////////////////////////////////////////////////
     //
     // restore previous texture and region selection
@@ -2476,7 +2181,7 @@ void print_zoomed_at (int  drawing_x, int  drawing_y, int *text, float  factor)
     select_texture (previous_texture);
     select_region  (previous_region);
 }
-
+        
 void draw_logo (int  modeflag)
 {
     ////////////////////////////////////////////////////////////////////////////////////
@@ -2513,21 +2218,17 @@ void draw_logo (int  modeflag)
     select_region (83);
     draw_region_rotozoomed_at (64, 8);
     set_multiply_color (color_yellow);
-    print_zoomed_at (100, 0,
-                     "DOWN single steps, START to continue, X to escape", 0.50);
-    print_zoomed_at (100, 16,
-                     "UP for content view (REGS, MEM, STACK, IOPORTS, none)", 0.50);
+    print_zoomed_at (100, 0,  "DOWN single steps, START to continue, X to escape", 0.50);
+    print_zoomed_at (100, 16, "UP for content view (REGS, MEM, STACK, IOPORTS, none)", 0.50);
 
     switch (modeflag)
     {
         case MODE_REG:
-            print_zoomed_at (100, 32,
-                             "LEFT/RIGHT cycle formats (hex, int, float)", 0.50);
+            print_zoomed_at (100, 32, "LEFT/RIGHT cycle formats (hex, int, float)", 0.50);
             break;
 
         case MODE_RNG:
-            print_zoomed_at (100, 32,
-                             "LEFT/RIGHT adjusts RNG value by 1, L/R by 100", 0.50);
+            print_zoomed_at (100, 32, "LEFT/RIGHT adjusts RNG value by 1, L/R by 100", 0.50);
             break;
 
         case MODE_STA:
@@ -2540,13 +2241,12 @@ void draw_logo (int  modeflag)
 
         case MODE_RAM:
         case MODE_MEM:
-            print_zoomed_at (100, 32,
-                             "LEFT/RIGHT adjust by 16, L/R adjust by 256", 0.50);
+            print_zoomed_at (100, 32, "LEFT/RIGHT adjust by 16, L/R adjust by 256", 0.50);
             break;
     }
 
     set_multiply_color (color_white);
-
+    
     ////////////////////////////////////////////////////////////////////////////////////
     //
     // restore previous texture and region selection
@@ -2612,10 +2312,10 @@ void  error_handler ()
     int       max;
     int       section;
     int      *offset;
-
+    
     ////////////////////////////////////////////////////////////////////////////////////
     //
-    // initialize memory type array with their identified names
+    // initialize memory type array with their identified names    
     //
     string_data [4] memtype            =
     {
@@ -2641,86 +2341,74 @@ void  error_handler ()
     {
         case ERROR_MEMORY_READ:
             error_title                = "ERROR: INVALID MEMORY READ";
-            error_message              = "Program attempted to read from a memory "
-                                         "address\nthat does not exist or is in a "
-                                         "write-only device.";
+            error_message              = "Program attempted to read from a memory address\n"
+                                         "that does not exist or is in a write-only device.";
             break;
 
         case ERROR_MEMORY_WRITE:
             error_title                = "ERROR: INVALID MEMORY WRITE";
-            error_message              = "Program attempted to write on a memory "
-                                         "address\nthat does not exist or is in a "
-                                         "read-only device.";
+            error_message              = "Program attempted to write on a memory address\n"
+                                         "that does not exist or is in a read-only device.";
             break;
 
         case ERROR_PORT_READ:
             error_title                = "ERROR: INVALID PORT READ";
-            error_message              = "Program attempted to read from a port "
-                                         "number\nthat does not exist or is set "
-                                         "as write-only.";
+            error_message              = "Program attempted to read from a port number\n"
+                                         "that does not exist or is set as write-only.";
             break;
 
         case ERROR_PORT_WRITE:
             error_title                = "ERROR: INVALID PORT WRITE";
-            error_message              = "Program attempted to write on a port "
-                                         "number\nthat does not exist or is set "
-                                         "as read-only.";
+            error_message              = "Program attempted to write on a port number\n"
+                                         "that does not exist or is set as read-only.";
             break;
 
         case ERROR_STACK_OVERFLOW:
             error_title                = "ERROR: STACK OVERFLOW";
-            error_message              = "Program pushed too many values in the "
-                                         "stack\nand available RAM memory was "
-                                         "exhausted.";
+            error_message              = "Program pushed too many values in the stack\n"
+                                         "and available RAM memory was exhausted.";
             break;
 
         case ERROR_STACK_UNDERFLOW:
             error_title                = "ERROR: STACK UNDERFLOW";
-            error_message              = "Program popped too many values from the "
-                                         "stack\nand all data stored in stack was "
-                                         "exhausted.";
+            error_message              = "Program popped too many values from the stack\n"
+                                         "and all data stored in stack was exhausted.";
             break;
 
         case ERROR_DIVISION:
             error_title                = "ERROR: DIVISION BY ZERO";
-            error_message              = "Program attempted to perform a division "
-                                         "or\nmodulus operation where the divisor "
-                                         "was zero.";
+            error_message              = "Program attempted to perform a division or\n"
+                                         "modulus operation where the divisor was zero.";
             break;
 
         case ERROR_ARC_COSINE:
             error_title                = "ERROR: ARC COSINE OUT OF RANGE";
-            error_message              = "Program attempted to perform an arc "
-                                         "cosine\noperation when the argument was "
-                                         "not in [-1,+1].";
+            error_message              = "Program attempted to perform an arc cosine\n"
+                                         "operation when the argument was not in [-1,+1].";
             break;
 
         case ERROR_ARC_TANGENT_2:
             error_title                = "ERROR: ARC TANGENT NOT DEFINED";
-            error_message              = "Program attempted to perform an arc "
-                                         "tangent\noperation when both of the "
-                                         "arguments were 0.";
+            error_message              = "Program attempted to perform an arc tangent\n"
+                                         "operation when both of the arguments were 0.";
             break;
 
         case ERROR_LOGARITHM:
             error_title                = "ERROR: LOGARITHM OUT OF RANGE";
             error_message              = "Program attempted to perform a logarithm\n"
-                                         "operation when the argument is not "
-                                         "positive.";
+                                         "operation when the argument is not positive.";
             break;
 
         case ERROR_POWER:
             error_title                = "ERROR: POWER HAS NO REAL SOLUTION";
-            error_message              = "Program attempted to perform a power "
-                                         "operation\nwhen base was negative and "
-                                         "exponent non integer.";
+            error_message              = "Program attempted to perform a power operation\n"
+                                         "when base was negative and exponent non integer.";
             break;
 
         case ERROR_UNKNOWN:
             error_title                = "UNKNOWN ERROR";
-            error_message              = "Program caused a hardware error with an "
-                                         "error\ncode that was not recognized by "
-                                         "the BIOS.";
+            error_message              = "Program caused a hardware error with an error\n"
+                                         "code that was not recognized by the BIOS.";
             break;
     }
 
@@ -2738,11 +2426,25 @@ void  error_handler ()
     // valuable, adjust instruction_pointer to point to the actual location
     // in CART memory
     //
-    offset                             = (int *) ADDR_CART_OFFSET;
-    if (*offset                       != 0xDEADBEEF)
+    offset                             = (int *) 0x003FFFEE;
+    //if (0x003FFFB2                    == (instruction_pointer & 0xFFFFFFF0))
+    /*
+    offset                             = instruction_pointer & 0xFFFFFFF0;
+    if (offset                        == 0x003FFFB2)
     {
-        instruction_pointer            = (int) *offset;
-    }
+        asm
+        {
+            "push R0"
+            "mov  R0,       [0x003FFFEE]"
+            "mov  {offset}, R0"
+            "pop  R0"
+        }*/
+
+        if (*offset                   != 0xDEADBEEF)
+        {
+            instruction_pointer        = (int) *offset;
+        }
+    //}
 
     ////////////////////////////////////////////////////////////////////////////////////
     //
@@ -2858,7 +2560,7 @@ void  error_handler ()
 
                 else // could be an instruction
                 {
-                    addr               = addr - 1; // check prior for immediate flag
+                    addr               = addr - 1; // check the previous for immediate flag
                     immflag            = (*(addr) & 0x02000000) >> 25;
                     if (immflag       == 1)
                     {
@@ -2875,7 +2577,7 @@ void  error_handler ()
                         list[index]    = (int)(addr); // addr of instruction
                         list[index+1]  = *(addr);     // actual hex of instruction
                         list[index+2]  = *(addr+1);   // immediate value
-                    }
+                    }        
                     else
                     {
                         addr           = addr + 1;
@@ -2924,7 +2626,7 @@ void  error_handler ()
                 set_multiply_color (color_white);
             }
 
-            x                          = 49;
+            x                          = 49;           
             hexit (x, y, list[(index*3)]);
             x                          = x    + (strlen (data) * 10);
             print_at (x, y, ":");
@@ -2933,7 +2635,7 @@ void  error_handler ()
             word                       = list[(index*3)+1];
             value                      = list[(index*3)+2];
             decode (169, y, word, value);
-
+        
             y                          = y    + 20;
 
             ////////////////////////////////////////////////////////////////////////////
@@ -3780,7 +3482,7 @@ void  views (int  modeflag, int *offset, int *viewflags, int *backtrace)
                 "MOV  {value}, R0"
                 "POP  R0"
             }
-            itoa (value, data, 16);
+            itoa (value, data, 10);
             print_at (560, 40, data);
 
             print_at (464, 60, "Blending:");
@@ -3888,10 +3590,6 @@ void  views (int  modeflag, int *offset, int *viewflags, int *backtrace)
             asm
             {
                 "PUSH R0"
-                "MOV  R0,      [0x003FFFE6]"
-                "OUT  GPU_SelectedTexture, R0"
-                "MOV  R0,      [0x003FFFE7]"
-                "OUT  GPU_SelectedRegion, R0"
                 "IN   R0,      GPU_RegionMinX"
                 "MOV  {value}, R0"
                 "POP  R0"
@@ -3903,10 +3601,6 @@ void  views (int  modeflag, int *offset, int *viewflags, int *backtrace)
             asm
             {
                 "PUSH R0"
-                "MOV  R0,      [0x003FFFE6]"
-                "OUT  GPU_SelectedTexture, R0"
-                "MOV  R0,      [0x003FFFE7]"
-                "OUT  GPU_SelectedRegion, R0"
                 "IN   R0,      GPU_RegionMinY"
                 "MOV  {value}, R0"
                 "POP  R0"
@@ -3918,10 +3612,6 @@ void  views (int  modeflag, int *offset, int *viewflags, int *backtrace)
             asm
             {
                 "PUSH R0"
-                "MOV  R0,      [0x003FFFE6]"
-                "OUT  GPU_SelectedTexture, R0"
-                "MOV  R0,      [0x003FFFE7]"
-                "OUT  GPU_SelectedRegion, R0"
                 "IN   R0,      GPU_RegionMaxX"
                 "MOV  {value}, R0"
                 "POP  R0"
@@ -3933,10 +3623,6 @@ void  views (int  modeflag, int *offset, int *viewflags, int *backtrace)
             asm
             {
                 "PUSH R0"
-                "MOV  R0,      [0x003FFFE6]"
-                "OUT  GPU_SelectedTexture, R0"
-                "MOV  R0,      [0x003FFFE7]"
-                "OUT  GPU_SelectedRegion, R0"
                 "IN   R0,      GPU_RegionMaxY"
                 "MOV  {value}, R0"
                 "POP  R0"
@@ -3948,10 +3634,6 @@ void  views (int  modeflag, int *offset, int *viewflags, int *backtrace)
             asm
             {
                 "PUSH R0"
-                "MOV  R0,      [0x003FFFE6]"
-                "OUT  GPU_SelectedTexture, R0"
-                "MOV  R0,      [0x003FFFE7]"
-                "OUT  GPU_SelectedRegion, R0"
                 "IN   R0,      GPU_RegionHotSpotX"
                 "MOV  {value}, R0"
                 "POP  R0"
@@ -3963,10 +3645,6 @@ void  views (int  modeflag, int *offset, int *viewflags, int *backtrace)
             asm
             {
                 "PUSH R0"
-                "MOV  R0,      [0x003FFFE6]"
-                "OUT  GPU_SelectedTexture, R0"
-                "MOV  R0,      [0x003FFFE7]"
-                "OUT  GPU_SelectedRegion, R0"
                 "IN   R0,      GPU_RegionHotspotY"
                 "MOV  {value}, R0"
                 "POP  R0"
@@ -4037,7 +3715,7 @@ void  views (int  modeflag, int *offset, int *viewflags, int *backtrace)
                 "MOV  {value},             R0"
                 "POP  R0"
             }
-
+            
             if (value             == 0)
             {
                 print_at (560, 100, "false");
@@ -4132,7 +3810,7 @@ void  views (int  modeflag, int *offset, int *viewflags, int *backtrace)
                 "MOV  {value},             R0"
                 "POP  R0"
             }
-
+            
             if (value             == 0)
             {
                 print_at (560, 240, "false");
@@ -4424,7 +4102,7 @@ void  views (int  modeflag, int *offset, int *viewflags, int *backtrace)
             }
             break;
     }
-
+    
     ////////////////////////////////////////////////////////////////////////////////////
     //
     // restore previous texture and region selection
