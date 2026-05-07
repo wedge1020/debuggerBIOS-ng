@@ -373,7 +373,6 @@ void main (void)
     int              btrace;
     int [NUM_MODES]  vflag;
     int              maxreg;
-    int              tmp;
 
     ////////////////////////////////////////////////////////////////////////////////////
     //
@@ -806,9 +805,6 @@ void main (void)
                     set_multiply_color (color_white);
                 }
 
-                hexit_zoomed (0, (y + 36), maxreg, 0.75);
-                hexit_zoomed (100, (y + 36), tmp, 0.75);
-
                 y                        = y + 18;
                 if (immflag             >  0)
                 {
@@ -1227,11 +1223,11 @@ void main (void)
                 ////////////////////////////////////////////////////////////////////////
                 //
                 // switch to CART context; no need to back up BIOS, since
-                // the debugger is being exit
+                // the debugger is being exit.  No need for optimization,
+                // as it is only happening once.
                 //
                 asm
                 {
-                    /*
                     "MOV R0,                  [0x003FFFE3]"
                     "OUT GPU_ClearColor,      R0"
                     "MOV R0,                  [0x003FFFE4]"
@@ -1252,7 +1248,7 @@ void main (void)
                     "OUT GPU_DrawingScaleY,   R0"
                     "MOV R0,                  [0x003FFFEC]"
                     "OUT GPU_DrawingAngle,    R0"
-                    "MOV R0,                  [0x003FFFED]" */
+                    "MOV R0,                  [0x003FFFED]"
                     "OUT INP_SelectedGamepad, R0"
                     "MOV R0,                  [0x003FFBA0]" // restore CART register
                     "MOV R1,                  [0x003FFBA1]" // restore CART register
@@ -1891,8 +1887,9 @@ void main (void)
         {
             maxreg                       = dstreg;
         }
-        else if ((srcreg                >  maxreg) &&
-                 (srcreg                <  14))
+
+        if ((srcreg                     >  maxreg) &&
+            (srcreg                     <  14))
         {
             maxreg                       = srcreg;
         }
@@ -1991,17 +1988,18 @@ void main (void)
         asm
         {
             "_CUSTOM_RET:"
-            "MOV [0x003FFBA0], R0"            // back up CART to RAM
-            //"POP R10"
-            /* */
+            "MOV [0x003FFBA1], R1"  // back up CART to RAM
+            "POP  R10"                        // R10 back to last legit CART state
+            "MOV [0x003FFBAA], R10"  // back up CART to RAM
+            "MOV [0x003FFBAE], R14" // back up CART to RAM
+            "MOV [0x003FFBAF], R15" // back up CART to RAM
+            "MOV R14,          [0x003FFFFE]"  // restore BIOS stack BP
+            "MOV R15,          [0x003FFFFF]"  // restore BIOS stack SP
             "MOV  R10,         {maxreg}"      // only transact used registers
             "IADD R10,         R10"           // double the value (immediate)
-            "MOV  R0,          _SAVE_CART_R0" // obtain offset
-            "MOV  {tmp},       R0"
-            "ISUB R0,          R10"           // calculate offset
-            "POP  R10"                        // R10 back to last legit CART state
-            //"JMP  R0"                         // jump to restore of max register
-            /* */
+            "MOV  R1,          _SAVE_CART_R0" // obtain offset
+            "ISUB R1,          R10"           // calculate offset
+            "JMP  R1"                         // jump to restore of max register
             "MOV [0x003FFBAD], R13" // back up CART to RAM
             "MOV [0x003FFBAC], R12" // back up CART to RAM
             "MOV [0x003FFBAB], R11" // back up CART to RAM
@@ -2014,11 +2012,9 @@ void main (void)
             "MOV [0x003FFBA4], R4"  // back up CART to RAM
             "MOV [0x003FFBA3], R3"  // back up CART to RAM
             "MOV [0x003FFBA2], R2"  // back up CART to RAM
-            "MOV [0x003FFBA1], R1"  // back up CART to RAM
+            "MOV [0x003FFBA0], R0"  // back up CART to RAM
             "_SAVE_CART_R0:"
-            "MOV [0x003FFBA1], R1"  // dummy back up CART to RAM
-            "MOV [0x003FFBAE], R14" // back up CART to RAM
-            "MOV [0x003FFBAF], R15" // back up CART to RAM
+            "MOV [0x003FFBA0], R0"  // dummy back up CART to RAM
             "IN  R0,           GPU_ClearColor" // back up CART GPU ports
             "MOV [0x003FFFE3], R0"
             "IN  R0,           GPU_MultiplyColor"
@@ -2055,8 +2051,6 @@ void main (void)
             "MOV R11,          [0x003FFFFB]" // restore BIOS register
             "MOV R12,          [0x003FFFFC]" // restore BIOS register
             "MOV R13,          [0x003FFFFD]" // restore BIOS register
-            "MOV R14,          [0x003FFFFE]" // restore BIOS stack BP
-            "MOV R15,          [0x003FFFFF]" // restore BIOS stack SP
         }
 
         ////////////////////////////////////////////////////////////////////////////////
