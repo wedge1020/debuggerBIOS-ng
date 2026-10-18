@@ -1,7 +1,7 @@
 #pragma once
 ////////////////////////////////////////////////////////////////////////////////////////
 //
-// config.hpp - user-tunable settings for debuggerBIOS
+// config.hpp - user-tunable settings for debuggerBIOS-ng
 //
 // Everything in here is a plain pre-processor value; change it and rebuild.
 //
@@ -48,7 +48,7 @@
 // debugger looks at the controls again. They are copied together into the native
 // routine and run with a single switch of context; each branch, WAIT or screen
 // clear ends the run early. 1 would execute one instruction per switch, as the
-// first debuggerBIOS did. At most 29 (the routine has 64 words; see defines.hpp).
+// first debuggerBIOS-ng did. At most 29 (the routine has 64 words; see defines.hpp).
 //
 #define  BLOCK_MAX                24
 

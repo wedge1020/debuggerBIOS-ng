@@ -1,7 +1,7 @@
 #pragma once
 ////////////////////////////////////////////////////////////////////////////////////////
 //
-// defines.hpp - constants shared by every part of debuggerBIOS: opcodes, port
+// defines.hpp - constants shared by every part of debuggerBIOS-ng: opcodes, port
 //               numbers, the debugger memory map, texture regions and colors.
 //
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -179,7 +179,7 @@
 
 ////////////////////////////////////////////////////////////////////////////////////////
 //
-// debuggerBIOS memory map. RAM is shared with the CART, so the debugger keeps
+// debuggerBIOS-ng memory map. RAM is shared with the CART, so the debugger keeps
 // everything it owns at the very top, where a CART is least likely to go. The
 // CART gets its own stack right below the reserved area.
 //

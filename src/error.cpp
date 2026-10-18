@@ -4,7 +4,7 @@
 //
 // NOTE: derived from the error_handler() developed during the spring 2025
 // offering of the CSCS2650 Computer Organization course at SUNY CCC; ported over
-// to add to the rich functionality of debuggerBIOS.
+// to add to the rich functionality of debuggerBIOS-ng.
 //
 // When the CPU hits an error the console starts the BIOS over at its first word,
 // which calls error_handler() with

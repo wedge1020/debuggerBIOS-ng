@@ -136,7 +136,7 @@ void ui_view_title (int *title)
 
 ////////////////////////////////////////////////////////////////////////////////////////
 //
-// draw_logo(): clear the screen and draw the debuggerBIOS logo in the top left,
+// draw_logo(): clear the screen and draw the debuggerBIOS-ng logo in the top left,
 // with the controls help along the top
 //
 void draw_logo (int mode, int keyboard)

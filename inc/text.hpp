@@ -15,6 +15,7 @@ class Text
 {
     int  *buffer;
     int   length;
+    int   mark;      // where the immediate value starts (-1: none)
 
     public:
         // start an empty string in the given storage
@@ -22,6 +23,7 @@ class Text
         {
             buffer    = storage;
             length    = 0;
+            mark      = -1;
             buffer[0] = 0;
         }
 
@@ -86,6 +88,20 @@ class Text
             add ('0');
             add ('x');
             hex (value, 8);
+        }
+
+        // append an instruction's immediate value in hex, noting where it starts
+        // (the screen draws it in the debugger's narrowed digits)
+        void imm (int value)
+        {
+            mark       = length;
+            hex32 (value);
+        }
+
+        // where the immediate starts, or -1
+        int mark_position ()
+        {
+            return mark;
         }
 
         // append a signed decimal number
