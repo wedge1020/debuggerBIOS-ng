@@ -1,47 +1,54 @@
 @echo off
+rem Make.bat: build script for debuggerBIOS (C++ edition)
+rem Needs the Vircon32 DevTools and v32c++ in the PATH.
+rem If the DevTools headers are not next to `compile`, set V32CXX_SDK_INCLUDE.
 
-REM create obj and bin folders if non exiting, since
-REM the development tools will not create them themselves
 if not exist obj mkdir obj
 if not exist bin mkdir bin
 
 echo.
+echo Transpile the C++ code
+echo --------------------------
+v32c++ -b -g --no-signed-shift --no-build-scripts debuggerBIOS.cpp -o obj\debuggerBIOS.c
+if errorlevel 1 goto failed
+
+echo.
 echo Compile the C code
 echo --------------------------
-REM compilation of a BIOS requires argument -b
-compile debuggerBIOS.c -o obj\debuggerBIOS.asm -b || goto :failed
+compile -g obj\debuggerBIOS.c -o obj\debuggerBIOS.asm -b
+if errorlevel 1 goto failed
 
 echo.
 echo Assemble the ASM code
 echo --------------------------
-REM assembly of a BIOS requires argument -b
-assemble obj\debuggerBIOS.asm -o obj\debuggerBIOS.vbin -b || goto :failed
+assemble -g program obj\debuggerBIOS.asm -o obj\debuggerBIOS.vbin -b
+if errorlevel 1 goto failed
 
 echo.
 echo Convert the PNG texture
 echo --------------------------
-png2vircon BiosTexture.png -o obj\BiosTexture.vtex || goto :failed
+png2vircon assets\BiosTexture.png -o obj\BiosTexture.vtex
+if errorlevel 1 goto failed
 
 echo.
 echo Convert the WAV sound
 echo --------------------------
-wav2vircon BiosSound.wav -o obj\BiosSound.vsnd || goto :failed
+wav2vircon assets\BiosSound.wav -o obj\BiosSound.vsnd
+if errorlevel 1 goto failed
 
 echo.
 echo Pack the ROM
 echo --------------------------
-packrom debuggerBIOS.xml -o bin\debuggerBIOS.v32 || goto :failed
+packrom debuggerBIOS.xml -o bin\debuggerBIOS.v32
+if errorlevel 1 goto failed
 
-goto :succeeded
+echo.
+echo BUILD SUCCESSFUL
+goto end
 
 :failed
 echo.
 echo BUILD FAILED
-exit /b %errorlevel%
+exit /b 1
 
-:succeeded
-echo.
-echo BUILD SUCCESSFUL
-exit /b
-
-@echo on
+:end
