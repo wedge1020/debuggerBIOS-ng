@@ -81,7 +81,7 @@ void decode_to_text (Text *line, int instruction, int immediate)
         case OPCODE_LOG:
             if (immflag == 1)
             {
-                line->hex32 (immediate);
+                line->imm (immediate);
             }
             else
             {
@@ -116,7 +116,7 @@ void decode_to_text (Text *line, int instruction, int immediate)
             line->str (", ");
             if (immflag == 1)
             {
-                line->hex32 (immediate);
+                line->imm (immediate);
             }
             else
             {
@@ -165,7 +165,7 @@ void decode_to_text (Text *line, int instruction, int immediate)
                 case 0:  // MOV Rd, imm
                     line->reg   (dstreg);
                     line->str   (", ");
-                    line->hex32 (immediate);
+                    line->imm (immediate);
                     break;
 
                 case 1:  // MOV Rd, Rs
@@ -177,7 +177,7 @@ void decode_to_text (Text *line, int instruction, int immediate)
                 case 2:  // MOV Rd, [imm]
                     line->reg   (dstreg);
                     line->str   (", [");
-                    line->hex32 (immediate);
+                    line->imm (immediate);
                     line->add   (']');
                     break;
 
@@ -193,13 +193,13 @@ void decode_to_text (Text *line, int instruction, int immediate)
                     line->str   (", [");
                     line->reg   (srcreg);
                     line->add   ('+');
-                    line->hex32 (immediate);
+                    line->imm (immediate);
                     line->add   (']');
                     break;
 
                 case 5:  // MOV [imm], Rs
                     line->add   ('[');
-                    line->hex32 (immediate);
+                    line->imm (immediate);
                     line->str   ("], ");
                     line->reg   (srcreg);
                     break;
@@ -215,7 +215,7 @@ void decode_to_text (Text *line, int instruction, int immediate)
                     line->add   ('[');
                     line->reg   (dstreg);
                     line->add   ('+');
-                    line->hex32 (immediate);
+                    line->imm (immediate);
                     line->str   ("], ");
                     line->reg   (srcreg);
                     break;
@@ -233,7 +233,7 @@ void decode_to_text (Text *line, int instruction, int immediate)
             if (immflag == 1)
             {
                 line->add   ('+');
-                line->hex32 (immediate);
+                line->imm (immediate);
             }
             line->add (']');
             break;
@@ -258,7 +258,7 @@ void decode_to_text (Text *line, int instruction, int immediate)
             line->str (", ");
             if (immflag == 1)
             {
-                line->hex32 (immediate);
+                line->imm (immediate);
             }
             else
             {
@@ -275,9 +275,26 @@ void decode_to_text (Text *line, int instruction, int immediate)
 void decode (int x, int y, int instruction, int immediate)
 {
     int   buffer[48];
+    int   mark     = 0;
     Text  line;
 
     line.init        (buffer);
     decode_to_text   (&line, instruction, immediate);
-    ui_text          (x, y, line.text (), 1.0, 1.0);
+    mark           = line.mark_position ();
+
+    if (mark      <  0)
+    {
+        ui_text      (x, y, line.text (), 1.0, 1.0);
+        return;
+    }
+
+    // the text before the immediate, the immediate in the narrowed digits the
+    // original used for it (80 pixels wide), then whatever follows it
+    buffer[mark + 0] = 0;
+    ui_text          (x, y, buffer, 1.0, 1.0);
+    ui_hex           (x + (mark * 10), y, immediate, 0.75);
+    if (buffer[mark + 10] != 0)
+    {
+        ui_text      (x + (mark * 10) + 80, y, buffer + mark + 10, 1.0, 1.0);
+    }
 }

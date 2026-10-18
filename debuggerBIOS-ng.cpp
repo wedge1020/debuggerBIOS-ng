@@ -17,8 +17,8 @@
 
 #title   "Vircon32 debuggerBIOS-ng"
 #version 2.0
-#texture BiosTexture "BiosTexture.png"
-#sound   BiosSound   "BiosSound.wav"
+#texture BiosTexture "assets/BiosTexture.png"
+#sound   BiosSound   "assets/BiosSound.wav"
 
 ////////////////////////////////////////////////////////////////////////////////////////
 //

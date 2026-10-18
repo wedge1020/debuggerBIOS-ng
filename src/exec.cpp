@@ -240,12 +240,31 @@ void Debugger::emulate (int instruction, int opcode)
             {
                 regs[dstreg]  = *((int *) ADDR_PORT_TIMCYCLE);
             }
+            else if (port == PORT_INP_SELECTED)
+            {
+                regs[dstreg]  = *((int *) (ADDR_SHADOW + SHADOW_GAMEPAD));
+            }
             else
             {
                 // RNG_CurrentValue: hand over the value held in memory, then
                 // draw the next one
                 regs[dstreg]  = *((int *) ADDR_PORT_RNGVALUE);
                 *((int *) ADDR_PORT_RNGVALUE) = read_port (PORT_RNG_VALUE);
+            }
+            break;
+
+        case OPCODE_OUT:
+            // OUT INP_SelectedGamepad: the console ignores values out of range
+            port        = instruction & INSTR_PORT_MASK;
+            immediate   = immflag ? immediate : regs[srcreg];
+            if ((immediate >= 0) &&
+                (immediate <  4))
+            {
+                *((int *) (ADDR_SHADOW + SHADOW_GAMEPAD)) = immediate;
+                if (io_live)
+                {
+                    select_gamepad (immediate);
+                }
             }
             break;
     }
@@ -324,12 +343,19 @@ void Debugger::execute (int limit)
             {
                 emulating = (port == PORT_TIM_FRAMECOUNTER) ||
                             (port == PORT_TIM_CYCLECOUNTER) ||
-                            (port == PORT_RNG_VALUE);
+                            (port == PORT_RNG_VALUE)        ||
+                            (port == PORT_INP_SELECTED);
             }
 
             else if (opcode == OPCODE_OUT)
             {
-                if (port == PORT_GPU_COMMAND)
+                if (port == PORT_INP_SELECTED)
+                {
+                    // the selected gamepad cannot be read back reliably, so
+                    // the debugger keeps track of what the CART selects
+                    emulating = TRUE;
+                }
+                else if (port == PORT_GPU_COMMAND)
                 {
                     if (immflag == 1)
                     {

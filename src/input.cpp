@@ -70,7 +70,7 @@ void Input::init (void)
     // the device keeps its last event across a console reset: take the strobe
     // side it shows now as the starting point, so that old event is not read as
     // a new one
-    previous       = get_selected_gamepad ();
+    previous       = *((int *) (ADDR_SHADOW + SHADOW_GAMEPAD));
     select_gamepad (KEYBOARD_GAMEPAD);
     if (gamepad_is_connected ())
     {
@@ -272,7 +272,7 @@ int Input::sample (void)
     //
     // read the devices; the CART's gamepad selection is put back as it was
     //
-    previous       = get_selected_gamepad ();
+    previous       = *((int *) (ADDR_SHADOW + SHADOW_GAMEPAD));
     select_gamepad (DEBUG_GAMEPAD);
     state          = read_pad ();
 

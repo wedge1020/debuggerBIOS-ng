@@ -40,6 +40,11 @@ int read_port (int port)
 // are the CART's. The first time the BIOS needs to draw they are copied into the
 // shadow words (see the memory map in defines.hpp).
 //
+// The selected gamepad is NOT among the things read: reading INP_SelectedGamepad
+// does not return the selection on the console (it returns the previous word of
+// the gamepad state), so the shadow word for it is kept up to date by the
+// debugger, which sees every OUT the CART does to that port.
+//
 void save_cart_io (void)
 {
     asm
@@ -65,8 +70,6 @@ void save_cart_io (void)
         "MOV  [0x003FFFE8], R0"
         "IN   R0,           GPU_DrawingAngle"
         "MOV  [0x003FFFE9], R0"
-        "IN   R0,           INP_SelectedGamepad"
-        "MOV  [0x003FFFEA], R0"
         "POP  R0"
     }
 }

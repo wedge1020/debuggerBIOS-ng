@@ -110,9 +110,8 @@ void Debugger::view_registers (void)
 
     ui_print              (490, 0, "register view");
     select_region         (region_divider_h);
-    set_drawing_scale     (150.0 / 81.0, 1.0);
-    draw_region_zoomed_at (490, 20);
-    set_drawing_scale     (1.0, 1.0);
+    draw_region_at        (490, 20);
+    draw_region_at        (540, 20);
 
     for (index    = 0;
          index   <  16;

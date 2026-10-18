@@ -1,4 +1,4 @@
-# debuggerBIOS (C++ edition)
+# debuggerBIOS-ng (C++ edition)
 
 Vircon32 BIOS with an interactive debugger, written in C++ for the v32cxx transpiler.
 The CART is never run directly: its instructions are copied into a RAM routine and run
@@ -7,12 +7,12 @@ under control, so you can step, continue or escape at any point.
 ## Build
 Put the Vircon32 DevTools and `v32c++` in the PATH, then `./Make.sh` (or `Make.bat`).
 If the DevTools headers are not beside `compile`, set `V32CXX_SDK_INCLUDE`.
-Output: `bin/debuggerBIOS.v32`.
+Output: `bin/debuggerBIOS-ng.v32`.
 Old v32c++ mangles `error_handler` even with `-b`; `Make.sh` repairs it, and
 `patches/v32cxx-bios-error-handler.patch` fixes v32c++ itself.
 
 ## Layout
-`debuggerBIOS.cpp` (unity build) · `inc/` headers (config, defines, ring, text, ports, ui, decode,
+`debuggerBIOS-ng.cpp` (unity build) · `inc/` headers (config, defines, ring, text, ports, ui, decode,
 input, debugger, error) · `src/` (ports, ui, decode, input, exec, views, debugger, error) ·
 `assets/` · `docs/` · `tests/` · `tools/`. Tunables are in `inc/config.hpp`.
 
@@ -36,13 +36,18 @@ power-on are ignored until released. The keyboard is optional (`KEYBOARD_ENABLED
 * CONTINUATION runs blocks of up to `BLOCK_MAX` (24) instructions per context switch; only
   branches, HLT, WAIT and some port reads are emulated.
 * GPU/gamepad state is saved only when the BIOS draws (lazy shadowing).
-* Measured on a counter loop: about 2.3x the iterations of the original debuggerBIOS in the same time.
+* Measured on a counter loop: about 2.3x the iterations of the original debuggerBIOS-ng in the same time.
 * Pathological case: unbounded recursion in CONTINUATION reaches the stack overflow error very
   slowly (it must exhaust ~4M stack words through emulated CALLs); after ESCAPE it is immediate.
 
 ## Notes
+* The selected gamepad cannot be read back: on the console, reading INP_SelectedGamepad returns
+  the previous word of the gamepad state, not the selection. The debugger therefore never reads it;
+  it tracks the CART's selection itself (starting at gamepad 0, updated by every CART `OUT INP_SelectedGamepad`)
+  and puts exactly that back on ESCAPE and whenever the CART resumes.
 * BIOS has no safe globals (they collide with the CART at RAM 0): state lives in a `Debugger`
   object on the relocated stack; fixed words at the top of RAM are listed in `inc/defines.hpp`.
 * Errors inside the RAM routine are mapped back to the CART address exactly.
 * After ESCAPE the TIM frame counter jumps (it is emulated while the debugger runs).
+* Hex values are drawn as the original did: "0x" scaled, digits at normal height with tightened spacing.
 * See `docs/AUDIT.md` and `docs/TEXTURE.md`.

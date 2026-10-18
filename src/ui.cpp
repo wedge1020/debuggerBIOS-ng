@@ -72,14 +72,42 @@ void ui_small (int x, int y, int *text, float factor)
     ui_text (x, y, text, factor, 1.0);
 }
 
+// ui_hex(): "0x" and 8 hex digits. As in the original, only the "0x" is scaled
+// (across, by `factor`); the digits are drawn at their normal size, with their
+// spacing tightened by `factor`, which makes them overlap a little.
 void ui_hex (int x, int y, int value, float factor)
 {
-    int   buffer[11];
-    Text  line;
+    int   shift   = 28;
+    int   digit   = 0;
+    int   adjust  = 0;
+    int   index   = 0;
 
-    line.init  (buffer);
-    line.hex32 (value);
-    ui_text    (x, y, buffer, factor, factor * 2.0);
+    adjust        = (int) (10.0 * factor);
+    if (factor   != 1.0)
+    {
+        adjust    = adjust + 1;
+    }
+
+    ui_text            (x, y, "0x", factor, 1.0);
+    x             = x + (adjust * 2);
+
+    select_texture     (-1);
+    set_drawing_scale  (1.0, 1.0);
+    for (index    = 0;
+         index   <  8;
+         index    = index + 1)
+    {
+        digit     = (value >> shift) & 0xF;
+        if (digit >  9)
+        {
+            digit = digit + 7;
+        }
+        select_region  (digit + 0x30);
+        draw_region_at (x, y);
+
+        x         = x + adjust;
+        shift     = shift - 4;
+    }
 }
 
 void ui_port (int x, int y, int value)
@@ -102,9 +130,8 @@ void ui_view_title (int *title)
 {
     ui_print              (464, 0, title);
     select_region         (region_divider_h);
-    set_drawing_scale     (176.0 / 81.0, 1.0);
-    draw_region_zoomed_at (464, 20);
-    set_drawing_scale     (1.0, 1.0);
+    draw_region_at        (464, 20);
+    draw_region_at        (560, 20);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////

@@ -37,6 +37,7 @@ void Debugger::init (void)
     view[MODE_INP]   = 0;
     view[MODE_MEM]   = ADDR_MEMCARD;
 
+    *((int *) (ADDR_SHADOW + SHADOW_GAMEPAD)) = 0;   // a console starts with gamepad 0
     history.init (history_store, HISTORY_SIZE);
     trace.init   (trace_store,   TRACE_SIZE);
     input.init   ();
@@ -419,6 +420,7 @@ void Debugger::escape (void)
     int  *code    = (int *) ADDR_CUSTOM_ROUTINE;
 
     release ();
+    select_gamepad (*((int *) (ADDR_SHADOW + SHADOW_GAMEPAD)));
 
     // an impossible CART offset, so an error from here on is reported as it is
     *((int *) ADDR_CART_OFFSET)  = ESCAPED_MARKER;
