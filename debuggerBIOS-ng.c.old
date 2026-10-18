@@ -1,7 +1,0 @@
-#include "inc/defines.h"
-#include "config.h"
-#include "src/main.c"
-#include "src/support.c"
-#include "src/error_handler.c"
-#include "src/decode.c"
-#include "src/views.c"
