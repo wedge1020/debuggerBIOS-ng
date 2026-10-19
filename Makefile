@@ -1,22 +1,25 @@
 # ****************************************************************************
 # *  debuggerBIOS-ng -- GNU Makefile
 # *
-# *  The BIOS build is driven by the transpiler-generated Make.sh (or
-# *  Make.bat): running v32c++ without --no-build-scripts writes both
-# *  scripts, and they carry the whole pipeline (transpile -> compile ->
-# *  assemble -> packrom) with all byproducts in obj/ and the final BIOS in
-# *  bin/. This Makefile makes sure the scripts exist -- initializing them
-# *  with v32c++ if they are missing -- and calls the one that is there.
+# *  The BIOS  build is  driven by  the transpiler-generated  Make.sh (or
+# *  Make.bat):  running v32c++  without  --no-build-scripts writes  both
+# *  scripts, and they carry the  whole pipeline (transpile -> compile ->
+# *  assemble -> packrom) with all byproducts  in obj/ and the final BIOS
+# *  in bin/. This Makefile makes  sure the scripts exist -- initializing
+# *  them with v32c++  if they are missing  -- and calls the  one that is
+# *  there.
 # *
 # *  Targets:
-# *    all       (default) the BIOS in bin/
-# *    bios      the same, explicitly (via Make.sh / Make.bat)
-# *    clean     remove bin/ obj/ put/ and the project .zip
-# *    archive   a zip of the project; its paths are relative, so it
-# *              extracts straight into the project base
-# *    put       a put/ bundle for reloading the context library:
-# *              Makefile as Makefile.txt, every source, header and .md
-# *              file, and the test scripts and CARTs, all flat
+# *    all         (default) the BIOS in bin/
+# *    bios        the same, explicitly (via Make.sh / Make.bat)
+# *    clean       remove bin/ obj/ put/ and the project .zip
+# *    archive     a zip of the project; its paths are relative, so it
+# *                extracts straight into the project base
+# *    put         a put/ bundle for reloading the context library:
+# *                Makefile as Makefile.txt, every source, header and .md
+# *                file, and the test scripts and CARTs, all flat
+# *    install     install normal build to Vircon32 Emulator directory
+# *    installOpt  install optimized build to Vircon32 Emulator directory
 # *
 # *  The transpiler is $(V32CXX) with $(V32CXX_FLAGS) (used only to create
 # *  the build scripts when they are missing); override with e.g.
@@ -36,7 +39,7 @@ HEADERS      := $(wildcard inc/*.hpp)
 ASSETS       := $(wildcard assets/*)
 
 .DEFAULT_GOAL := all
-.PHONY: all bios clean archive put
+.PHONY: all bios clean archive put install installOpt
 
 all: bios
 
@@ -90,3 +93,9 @@ put:
 	@cp -v tests/scripts/* put/
 	@cp -v tests/carts/*.c put/
 	@echo "put/ ready: Makefile.txt, sources, headers, .md files and tests"
+
+install:
+	@cp -v bin/debuggerBIOS-ng.v32 /usr/local/Vircon32/Emulator/Bios/
+
+installOpt:
+	@cp -v bin/debuggerBIOS-ngOpt.v32 /usr/local/Vircon32/Emulator/Bios/debuggerBIOS-ng.v32
