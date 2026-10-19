@@ -265,11 +265,11 @@
 
 ////////////////////////////////////////////////////////////////////////////////////////
 //
-// actions that fire when a control is released
+// actions that fire when a control (or the START+X combo) is released
 //
 #define  ACTION_NONE             0
 #define  ACTION_STEP             1   // DOWN
-#define  ACTION_CONTINUE         2   // START
+#define  ACTION_CONTINUE         2   // START+X: toggles CONTINUATION mode
 #define  ACTION_ESCAPE           3   // X
 
 ////////////////////////////////////////////////////////////////////////////////////////

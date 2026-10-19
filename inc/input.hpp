@@ -6,15 +6,22 @@
 // The debugger sees the two devices as one set of eight controls (see CTRL_* in
 // defines.hpp). What a control does depends on its kind:
 //
-//   ACTIONS - DOWN (step), START (continue/stop continuing), X (escape)
+//   ACTIONS - DOWN (step), START+X (enter/leave continuation), X (escape)
 //
 //       They fire when the control is RELEASED, and only if it was pressed
-//       alone: no other control may go down while it is held. Press START and
-//       then bump LEFT, and nothing happens when START comes up; the whole
+//       alone: no other control may go down while it is held. Press DOWN and
+//       then bump LEFT, and nothing happens when DOWN comes up; the whole
 //       chord is ignored until every control has been let go. A press that was
 //       already in progress when the debugger started is ignored in the same
 //       way. This is what keeps a clumsy hold on the pad from launching the CART
 //       out of the debugger, or leaving continue mode by accident.
+//
+//       The one exception is the START+X combo, which toggles CONTINUATION mode.
+//       Either control may go down first (or both in the same frame); nothing
+//       else may join them; it fires when both have been released. START by
+//       itself does nothing, so a stray START (the button that powered the
+//       console on, a v32io keyboard Enter) can never start or stop the CART.
+//       X by itself is still ESCAPE: it fires on release, unless START joined.
 //
 //   NAVIGATION - UP (cycle views), LEFT/RIGHT/L/R (adjust the view)
 //

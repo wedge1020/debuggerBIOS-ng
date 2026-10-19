@@ -176,7 +176,7 @@ void draw_logo (int mode, int keyboard)
 
     set_multiply_color    (color_yellow);
     ui_small              (100, 0,
-                           "DOWN steps, START continues, X escapes (on release)", 0.5);
+                           "DOWN steps, START+X toggles continue, X escapes (on release)", 0.5);
     ui_small              (100, 16,
                            "UP for content view (REGS, MEM, STACK, IOPORTS, none)", 0.5);
 

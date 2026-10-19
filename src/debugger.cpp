@@ -367,8 +367,8 @@ void Debugger::interact (void)
 ////////////////////////////////////////////////////////////////////////////////////////
 //
 // run_continued(): CONTINUATION mode. The CART runs, without the debugger screen,
-// but is still under control: the controls are looked at every frame, and START
-// brings back the single-step screen (X leaves the debugger).
+// but is still under control: the controls are looked at every frame, and START+X
+// (the same combo that started it) brings back the single-step screen (X leaves the debugger).
 //
 // The selected resource view is drawn each time the CART clears the screen, so
 // it sits behind whatever the CART draws on top.

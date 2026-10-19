@@ -7,6 +7,7 @@
 ////////////////////////////////////////////////////////////////////////////////////////
 
 #define  ACTION_CONTROLS         (CTRL_DOWN | CTRL_START | CTRL_X)
+#define  COMBO_CONTROLS          (CTRL_START | CTRL_X)    // toggles CONTINUATION mode
 #define  REPEAT_CONTROLS         (CTRL_LEFT | CTRL_RIGHT | CTRL_L | CTRL_R)
 #define  NAVIGATION_CONTROLS     (CTRL_UP | REPEAT_CONTROLS)
 
@@ -106,7 +107,7 @@ int Input::read_pad (void)
 // key_control(): the debugger control a v32kbd key stands for (0: none)
 //
 //   arrows .......... UP DOWN LEFT RIGHT
-//   Enter, c ........ START (continue)
+//   Enter, c ........ START (with X: toggle continue)
 //   Space ........... DOWN  (step)
 //   Escape, x ....... X     (escape)
 //   [ , ............. L
@@ -248,6 +249,7 @@ int Input::sample (void)
     int  previous  = 0;
     int  state     = 0;
     int  edge      = 0;
+    int  extra     = 0;
     int  index     = 0;
     int  bit       = 1;
 
@@ -327,14 +329,31 @@ int Input::sample (void)
     ////////////////////////////////////////////////////////////////////////////////////
     //
     // actions: armed by a press that happens alone, cancelled by any other control
-    // going down meanwhile, fired by the release
+    // going down meanwhile, fired by the release.
+    //
+    // The one company allowed is the START+X combo (toggles CONTINUATION mode): when
+    // START is armed and X goes down (or the other way round) the armed set becomes
+    // the combo, and it fires once every control of it has been released. START
+    // alone does nothing, which keeps a stray START (a power-on button, a v32io
+    // keyboard Enter) from toggling anything.
     //
     if (armed != 0)
     {
-        if ((state & (~armed)) != 0)
+        extra               = state & (~armed);
+
+        if (extra          != 0)
         {
-            armed           = 0;
-            dead            = TRUE;
+            if (((armed & COMBO_CONTROLS) == armed) &&
+                (armed != COMBO_CONTROLS)           &&
+                (extra == (COMBO_CONTROLS ^ armed)))
+            {
+                armed       = COMBO_CONTROLS;
+            }
+            else
+            {
+                armed       = 0;
+                dead        = TRUE;
+            }
         }
 
         else if ((state & armed) == 0)
@@ -343,11 +362,11 @@ int Input::sample (void)
             {
                 action      = ACTION_STEP;
             }
-            else if (armed == CTRL_START)
+            else if (armed == COMBO_CONTROLS)
             {
                 action      = ACTION_CONTINUE;
             }
-            else
+            else if (armed == CTRL_X)
             {
                 action      = ACTION_ESCAPE;
             }
@@ -358,9 +377,11 @@ int Input::sample (void)
     else if ((dead == FALSE) &&
              ((edge & ACTION_CONTROLS) != 0))
     {
-        // pressed alone, and a single one: arm it; any company makes it a chord
+        // pressed alone, and a single one: arm it; the combo may also arrive whole,
+        // both controls in the same frame; any other company makes it a chord
         if ((state == edge) &&
-            ((state & (state - 1)) == 0))
+            (((state & (state - 1)) == 0) ||
+             (state == COMBO_CONTROLS)))
         {
             armed           = state;
         }

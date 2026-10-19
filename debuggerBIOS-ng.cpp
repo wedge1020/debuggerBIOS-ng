@@ -4,9 +4,9 @@
 //
 // Starts in single-step mode, waiting for confirmation on the first CART offset,
 // 0x20000000. DOWN single-steps, UP cycles the resource views, LEFT/RIGHT and L/R
-// adjust the content of the current view, START continues (CONTINUATION mode: the
+// adjust the content of the current view, START+X toggles CONTINUATION mode (the
 // CART runs, still under the debugger's control) and X escapes (leaves the debugger).
-// START, X and DOWN act when the button is released. A v32kbd keyboard on the
+// START+X, X and DOWN act when released (the combo, when both are). A v32kbd keyboard on the
 // third gamepad port does the same (see README.md).
 //
 // Build with Make.sh (or Make.bat): the C++ is turned into Vircon32 C by v32c++.

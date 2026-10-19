@@ -16,18 +16,19 @@ Old v32c++ mangles `error_handler` even with `-b`; `Make.sh` repairs it, and
 input, debugger, error) · `src/` (ports, ui, decode, input, exec, views, debugger, error) ·
 `assets/` · `docs/` · `tests/` · `tools/`. Tunables are in `inc/config.hpp`.
 
-## Controls (act on RELEASE for DOWN / START / X)
+## Controls (act on RELEASE for DOWN / X / START+X)
 | control | keyboard (v32kbd, port 3) | action |
 |---|---|---|
 | DOWN | Down, Space | step one instruction |
-| START | Enter, c | start / stop CONTINUATION |
-| X | Esc, x | ESCAPE: leave the debugger, CART runs natively |
+| START+X | Enter+x, c+Esc | start / stop CONTINUATION (fires when the combo is released) |
+| X (alone) | Esc, x | ESCAPE: leave the debugger, CART runs natively |
+| START (alone) | Enter, c | nothing (only part of the combo) |
 | UP | Up | next content view |
 | LEFT/RIGHT | Left/Right | small adjust (auto-repeat) |
 | L/R | [ , / ] . | big adjust (auto-repeat) |
 
 A press only counts if the control went down alone and nothing else went down before it was
-released; otherwise the whole chord is ignored until everything is let go. Controls held at
+released (START and X together form the one combo; either may go down first); otherwise the whole chord is ignored until everything is let go. Controls held at
 power-on are ignored until released. The keyboard is optional (`KEYBOARD_ENABLED`,
 `KEYBOARD_GAMEPAD` in config.hpp); a small built-in decoder is used, not the v32::Keyboard class.
 
